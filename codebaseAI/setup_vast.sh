@@ -15,8 +15,15 @@ pip install -r requirements.txt
 # SpikingJelly chạy nhanh hơn với CUDA kernel (tùy chọn; chọn đúng bản CUDA):
 pip install cupy-cuda12x 2>/dev/null || echo "   (bỏ qua cupy — SNN vẫn chạy bằng backend torch)"
 
-echo "==> 2. Kiểm tra GPU"
-python -c "import torch; ok=torch.cuda.is_available(); print('CUDA:', ok, '|', torch.cuda.get_device_name(0) if ok else 'KHÔNG THẤY GPU')"
+echo "==> 2. Kiểm tra GPU (quan trọng cho RTX 50-series / Blackwell)"
+python -c "
+import torch
+print('torch', torch.__version__, '| CUDA build', torch.version.cuda)
+assert torch.cuda.is_available(), 'KHONG thay GPU CUDA — chon template co CUDA!'
+print('GPU:', torch.cuda.get_device_name(0))
+x = torch.randn(2000, 2000, device='cuda'); float((x @ x).sum())   # test op that tren GPU
+print('Test GPU op: OK — torch chay duoc tren GPU nay')
+" || { echo '   [LOI] torch khong chay duoc tren GPU (5090 can PyTorch >=2.6, CUDA 12.8+).'; echo '         -> chon Template PyTorch moi hon.'; exit 1; }
 
 echo "==> 3. Tải dữ liệu từ Google Cloud + dựng nhãn 3 lớp"
 cd ../dataset
@@ -25,9 +32,13 @@ cd ../dataset
 # splits/*.csv đã có sẵn trong repo (271/87/87) — không cần chạy make_splits
 cd ../codebaseAI
 
-echo "==> 4. Smoke-test nhanh (U-Net vài bước)"
-python train.py --config configs/unet.yaml || echo "   (kiểm tra lỗi ở trên nếu có)"
+echo "==> 4. Smoke-test toàn bộ model + pipeline (forward/backward, KHÔNG train đầy đủ)"
+python smoke_test.py
 
 echo ""
-echo "XONG. Lưu ý: storage trên Vast là TẠM THỜI —"
-echo "  tải thư mục runs/ (checkpoint + kết quả) về máy TRƯỚC KHI destroy instance."
+echo "==> Sẵn sàng train. Ví dụ:"
+echo "   python train.py    --config configs/unet.yaml"
+echo "   python train.py    --config configs/spiking_unet.yaml"
+echo "   python evaluate.py --config configs/unet.yaml"
+echo ""
+echo "LƯU Ý: storage Vast là TẠM THỜI — tải runs/ về máy TRƯỚC KHI destroy instance."

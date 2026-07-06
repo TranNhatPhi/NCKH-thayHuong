@@ -99,4 +99,5 @@ class Sen1FloodsDataset(Dataset):
 def get_dataloader(data_root, split, batch_size=8, num_workers=4, **ds_kwargs):
     ds = Sen1FloodsDataset(data_root, split, **ds_kwargs)
     return DataLoader(ds, batch_size=batch_size, shuffle=(split == "train"),
-                      num_workers=num_workers, pin_memory=True, drop_last=(split == "train"))
+                      num_workers=num_workers, pin_memory=torch.cuda.is_available(),
+                      drop_last=(split == "train"))
