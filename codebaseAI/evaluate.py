@@ -35,15 +35,22 @@ def evaluate_learned(cfg, device):
             metric.update_perchip(pred[0], label[0])
     res = metric.compute()
 
-    # Năng lượng (ANN: FLOPs×E_MAC). SNN: TODO SynOps qua energy.SpikeCounter.
-    try:
-        flops, params = E.count_flops_params(
-            model, input_shape=(1, cfg.get("in_channels", 2), 512, 512), device="cpu")
-        res["params_M"] = round(params / 1e6, 3)
-        res["FLOPs_G"] = round(flops / 1e9, 3)
-        res["energy_mJ_ANN"] = round(E.ann_energy_joules(flops) * 1e3, 4)
-    except Exception as e:
-        res["energy_note"] = f"Chưa đo được năng lượng: {e}"
+    # Năng lượng: SNN → SynOps×E_AC (phép cộng thưa) ; ANN → FLOPs×E_MAC
+    from src.utils import count_params
+    res["params_M"] = round(count_params(model) / 1e6, 3)
+    C = cfg.get("in_channels", 2)
+    if E.is_spiking(model):
+        dummy = torch.randn(1, C, 512, 512, device=device)
+        synops = E.count_synops(model, dummy, device)
+        res["SynOps_G"] = round(synops / 1e9, 3)
+        res["energy_mJ_SNN"] = round(E.snn_energy_joules(synops) * 1e3, 4)
+    else:
+        try:
+            flops, _ = E.count_flops_params(model, input_shape=(1, C, 512, 512), device="cpu")
+            res["FLOPs_G"] = round(flops / 1e9, 3)
+            res["energy_mJ_ANN"] = round(E.ann_energy_joules(flops) * 1e3, 4)
+        except Exception as e:
+            res["energy_note"] = f"Chưa đo FLOPs: {e}"
     return res
 
 
