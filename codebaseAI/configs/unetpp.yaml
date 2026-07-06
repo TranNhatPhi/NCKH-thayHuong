@@ -1,0 +1,3 @@
+_base_: base.yaml
+name: unetpp              # runs/unetpp/
+model: unetpp            # U-Net++ (smp, ResNet34) — kế thừa batch 16, lr 1e-4 từ base

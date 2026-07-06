@@ -1,0 +1,4 @@
+_base_: base.yaml
+name: deeplabv3          # runs/deeplabv3/
+model: deeplabv3        # DeepLabV3 (smp, ResNet34)
+lr: 0.00005             # theo Banerjee & Daou 2026: DeepLabV3 dùng lr nhỏ hơn UNet
