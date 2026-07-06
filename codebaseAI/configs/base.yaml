@@ -10,7 +10,7 @@ crop_size: 256                 # train cắt 256; val/test giữ full 512
 per_channel_norm: false        # true = chuẩn hóa min/max riêng từng kênh (ablation)
 
 # Huấn luyện
-batch_size: 8
+batch_size: 16          # H100 94GB dư sức; tăng 32 nếu muốn nhanh hơn nữa
 lr: 0.0001
 weight_decay: 0.0001
 epochs: 80
