@@ -60,8 +60,8 @@ Khi có lớp JRC, cần kiểm tra: (a) cùng kích thước/lưới 512×512 v
 ### 🟡 Điểm 6 — Protocol test 512 vs train 256
 Train trên crop 256 nhưng test ảnh 512 → thống kê khác nhau. Cần chốt: test bằng **sliding-window 256 có overlap** rồi ghép, hay test full 512. (SNN 512×T bước có thể hết RAM.)
 
-### 🟡 Điểm 7 — Setup A (weak) đo việc khác Setup B
-Weak-label là **nước nhị phân** (chưa có JRC cho chip weak), còn Setup B là **3 lớp flood**. Hai cái đo bài toán khác nhau → khi báo cáo phải nói rõ, không đặt cạnh nhau như so sánh trực tiếp.
+### ✅ Điểm 7 — Setup A vs Setup B → CHỐT: chỉ làm Setup B
+**Quyết định (chốt):** chỉ làm **Setup B** (3 lớp flood-on-land trên hand-labeled), **bỏ Setup A** (weak-supervised nhị phân) để tập trung một bài toán, tránh nhầm lẫn khi so sánh. Code trong `codebaseAI/` vốn đã chỉ chạy Setup B nên không cần sửa gì.
 
 ### 🟡 Điểm 8 — Reproducibility
 `splits/*.csv` đã sinh ra — nên **commit vào git** để cố định split, và kiểm tra `.gitignore` không loại nó.
@@ -85,7 +85,7 @@ Weak-label là **nước nhị phân** (chưa có JRC cho chip weak), còn Setup
 | 5 | Chuẩn hóa VV/VH | Baseline [-50,0] dùng chung + **ablation per-channel** | VH median −16.3 lệch xa VV −9.8 | ⬜ Ablation, xin ý kiến |
 | 6 | JRC no-data & lưới | ✅ Đã tải 446/446; JRC **nhị phân** (permanent = jrc>0), căn lưới khớp; nhãn 3 lớp đã dựng | — | ✅ Xong |
 | 7 | Test 512 vs crop 256 | SNN: **sliding-window 256 overlap** rồi ghép; CNN: test full 512 | nhất quán train/test, tránh hết RAM | ⬜ Xin thầy duyệt |
-| 8 | Setup A ≠ Setup B | Báo cáo **tách riêng** (A: nhị phân/weak; B: 3 lớp) | hai bài toán khác nhau | ⬜ Xin thầy duyệt |
+| 8 | Setup A vs B | ✅ **Chốt: chỉ làm Setup B** (3 lớp hand-labeled), bỏ Setup A weak | tập trung 1 bài toán | ✅ Chốt Setup B |
 | 9 | Reproducibility | **Commit `splits/*.csv`** vào git | cố định split để tái lập | ⬜ Sẽ làm |
 
 > ⭐ = quyết định quan trọng nhất cần thầy chốt (nó kéo theo cách tính mọi con số trong paper).
