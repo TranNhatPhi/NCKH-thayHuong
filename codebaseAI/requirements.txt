@@ -1,0 +1,10 @@
+# Cài: pip install -r requirements.txt
+torch>=2.0
+torchvision
+numpy
+rasterio
+pyyaml
+scikit-image                     # Otsu baseline
+segmentation-models-pytorch      # U-Net++, DeepLabV3, SegFormer (backbone ResNet34/MiT)
+spikingjelly                     # Spiking U-Net (SNN) + ANN2SNN
+fvcore                           # đếm FLOPs (đo năng lượng ANN); hoặc dùng thop

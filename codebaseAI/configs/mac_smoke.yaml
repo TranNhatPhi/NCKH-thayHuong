@@ -1,0 +1,10 @@
+# Config NHẸ để kiểm pipeline trên MacBook Air M4 16GB (không phải để lấy kết quả thật).
+# Chạy: PYTORCH_ENABLE_MPS_FALLBACK=1 python train.py --config configs/mac_smoke.yaml
+_base_: base.yaml
+name: unet_mac_smoke
+model: unet
+crop_size: 128          # nhỏ cho nhẹ RAM + chạy nhanh
+batch_size: 2           # 16GB unified: giữ batch nhỏ
+num_workers: 2          # Mac + rasterio: để nhỏ (nếu treo, đặt 0)
+epochs: 2               # chỉ để xác nhận luồng data→train→eval thông
+model_kwargs: {base: 16}

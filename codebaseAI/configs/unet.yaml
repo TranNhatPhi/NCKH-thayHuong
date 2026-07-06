@@ -1,0 +1,4 @@
+_base_: base.yaml
+name: unet                 # thư mục output: runs/unet/
+model: unet
+model_kwargs: {base: 32}

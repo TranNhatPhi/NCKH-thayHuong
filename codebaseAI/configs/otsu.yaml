@@ -1,0 +1,3 @@
+_base_: base.yaml
+name: otsu                # runs/otsu/  — chỉ dùng cho evaluate.py (không train)
+model: otsu

@@ -1,0 +1,23 @@
+# ============ Dữ liệu thô NẶNG — KHÔNG đưa lên git (chuyển riêng ~1GB) ============
+dataset/S1Hand/
+dataset/S1Weak/
+dataset/LabelHand/
+dataset/S1OtsuLabelWeak/
+dataset/JRCWaterHand/
+dataset/Label3Class/
+dataset.zip
+*.tif
+*.tiff
+
+# splits/*.csv (nhẹ, quan trọng cho tái lập) được GIỮ — không nằm trong rule trên
+
+# ============ Output / checkpoint / cache ============
+codebaseAI/runs/
+**/__pycache__/
+*.pyc
+*.pt
+*.pth
+*.ckpt
+
+# ============ Hệ thống ============
+.DS_Store

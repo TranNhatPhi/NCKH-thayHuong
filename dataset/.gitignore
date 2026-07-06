@@ -1,0 +1,8 @@
+S1Hand/
+S1Weak/
+LabelHand/
+S1OtsuLabelWeak/
+.gitattributes
+*.tif
+__pycache__/
+*.pyc

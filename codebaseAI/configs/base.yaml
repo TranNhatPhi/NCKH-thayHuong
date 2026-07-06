@@ -1,0 +1,20 @@
+# Cấu hình CHUNG — mọi thí nghiệm kế thừa qua khóa `_base_: base.yaml`.
+# Chạy các lệnh TỪ thư mục codebaseAI/ để `../dataset` trỏ đúng.
+data_root: "../dataset"        # thư mục dataset/ (chứa splits/, S1Hand/, Label3Class/)
+seed: 42
+in_channels: 2                 # VV, VH (đổi thành 3 nếu thêm kênh 1-VH/VV)
+num_workers: 4
+
+# Dữ liệu
+crop_size: 256                 # train cắt 256; val/test giữ full 512
+per_channel_norm: false        # true = chuẩn hóa min/max riêng từng kênh (ablation)
+
+# Huấn luyện
+batch_size: 8
+lr: 0.0001
+weight_decay: 0.0001
+epochs: 80
+patience: 8                    # early-stop theo flood_IoU
+
+# Loss = CE(ignore -1) + Dice + Focal
+loss_kwargs: {w_ce: 1.0, w_dice: 1.0, w_focal: 1.0, gamma: 2.0}

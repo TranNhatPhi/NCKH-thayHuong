@@ -1,0 +1,5 @@
+_base_: base.yaml
+name: segformer_b2        # runs/segformer_b2/
+model: segformer
+lr: 0.00005              # Transformer nên lr nhỏ hơn
+model_kwargs: {variant: b2}   # b0 | b1 | b2
