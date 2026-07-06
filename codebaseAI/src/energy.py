@@ -21,7 +21,7 @@ def count_flops_params(model, input_shape=(1, 2, 512, 512), device="cpu"):
     try:
         from fvcore.nn import FlopCountAnalysis, parameter_count
         flops = FlopCountAnalysis(model.to(device), x).total()
-        params = sum(v for v in parameter_count(model).values())
+        params = parameter_count(model)[""]        # khóa "" = TỔNG (đừng cộng cả submodule)
         return int(flops), int(params)
     except ImportError:
         pass
