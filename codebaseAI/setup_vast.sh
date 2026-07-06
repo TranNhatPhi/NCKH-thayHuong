@@ -18,11 +18,11 @@ pip install cupy-cuda12x 2>/dev/null || echo "   (bỏ qua cupy — SNN vẫn ch
 echo "==> 2. Kiểm tra GPU"
 python -c "import torch; ok=torch.cuda.is_available(); print('CUDA:', ok, '|', torch.cuda.get_device_name(0) if ok else 'KHÔNG THẤY GPU')"
 
-echo "==> 3. Tái tạo nhãn 3 lớp + split (nếu chưa có)"
+echo "==> 3. Tải dữ liệu từ Google Cloud + dựng nhãn 3 lớp"
 cd ../dataset
-[ -d JRCWaterHand ] || python download_jrc.py
-[ -d Label3Class ]  || python build_3class_labels.py
-[ -f splits/train.csv ] || python make_splits.py
+[ -d S1Hand ]      || python download_data.py        # S1Hand+LabelHand+JRC (~300MB)
+[ -d Label3Class ] || python build_3class_labels.py  # dựng nhãn 3 lớp
+# splits/*.csv đã có sẵn trong repo (271/87/87) — không cần chạy make_splits
 cd ../codebaseAI
 
 echo "==> 4. Smoke-test nhanh (U-Net vài bước)"
