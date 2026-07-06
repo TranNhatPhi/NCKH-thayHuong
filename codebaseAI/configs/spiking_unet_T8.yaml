@@ -1,0 +1,5 @@
+_base_: base.yaml
+name: spiking_unet_T8
+model: spiking_unet
+batch_size: 8
+model_kwargs: {base: 32, T: 8, encoding: direct}
