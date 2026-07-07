@@ -44,15 +44,19 @@ class SpikingUNet(nn.Module):
         super().__init__()
         self.T = T
         self.encoding = encoding
-        c = [base, base * 2, base * 4, base * 8]
+        # 4 tầng — khớp Y HỆT U-Net (unet.py), chỉ khác LIF thay ReLU → cùng ~7.76M params
+        c = [base, base * 2, base * 4, base * 8, base * 16]
         self.d1 = SpikingDoubleConv(in_channels, c[0])
         self.d2 = SpikingDoubleConv(c[0], c[1])
         self.d3 = SpikingDoubleConv(c[1], c[2])
-        self.bott = SpikingDoubleConv(c[2], c[3])
+        self.d4 = SpikingDoubleConv(c[2], c[3])
+        self.bott = SpikingDoubleConv(c[3], c[4])
         self.pool = nn.MaxPool2d(2)
+        self.up4 = nn.ConvTranspose2d(c[4], c[3], 2, stride=2)
         self.up3 = nn.ConvTranspose2d(c[3], c[2], 2, stride=2)
         self.up2 = nn.ConvTranspose2d(c[2], c[1], 2, stride=2)
         self.up1 = nn.ConvTranspose2d(c[1], c[0], 2, stride=2)
+        self.u4 = SpikingDoubleConv(c[4], c[3])
         self.u3 = SpikingDoubleConv(c[3], c[2])
         self.u2 = SpikingDoubleConv(c[2], c[1])
         self.u1 = SpikingDoubleConv(c[1], c[0])
@@ -62,8 +66,10 @@ class SpikingUNet(nn.Module):
         s1 = self.d1(x)
         s2 = self.d2(self.pool(s1))
         s3 = self.d3(self.pool(s2))
-        b = self.bott(self.pool(s3))
-        x = self.u3(torch.cat([self.up3(b), s3], 1))
+        s4 = self.d4(self.pool(s3))
+        b = self.bott(self.pool(s4))
+        x = self.u4(torch.cat([self.up4(b), s4], 1))
+        x = self.u3(torch.cat([self.up3(x), s3], 1))
         x = self.u2(torch.cat([self.up2(x), s2], 1))
         x = self.u1(torch.cat([self.up1(x), s1], 1))
         return self.head(x)
