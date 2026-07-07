@@ -5,7 +5,8 @@
 # Một run lỗi sẽ KHÔNG dừng cả script (in FAILED rồi chạy tiếp).
 # ============================================================================
 SEEDS="0 1 2"
-BASELINES="unet_smp unetpp deeplabv3 segformer_b2 mobilenet_unet"
+# unet = from-scratch (cặp so sánh CÔNG BẰNG với SNN); còn lại pretrained ImageNet
+BASELINES="unet unet_smp unetpp deeplabv3 segformer_b2 mobilenet_unet"
 
 run() { echo ">>> $*"; "$@" || echo "!!! FAILED: $*"; }
 
@@ -33,7 +34,7 @@ echo "===== Otsu (khong train) ====="
 run python evaluate.py --config configs/otsu.yaml
 
 echo "===== ANN2SNN (convert tu unet_smp seed 0) ====="
-run python ann2snn_convert.py --ann_config configs/unet_smp.yaml --T 32 --name ann2snn
+run python ann2snn_convert.py --ann_config configs/unet_smp.yaml --ann_run unet_smp_s0 --T 32 --name ann2snn
 
 echo "===== Tong hop bang + Pareto ====="
 run python summarize.py

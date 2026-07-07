@@ -41,6 +41,8 @@ class SNNWrapper(nn.Module):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ann_config", required=True, help="config của ANN đã train")
+    ap.add_argument("--ann_run", default=None,
+                    help="tên run dir của ANN (mặc định = name trong config; multi-seed dùng vd unet_smp_s0)")
     ap.add_argument("--T", type=int, default=32)
     ap.add_argument("--name", default="ann2snn")
     args = ap.parse_args()
@@ -50,7 +52,8 @@ def main():
     # 1. Nạp ANN đã train
     ann = get_model(cfg["model"], in_channels=cfg.get("in_channels", 2),
                     num_classes=3, **cfg.get("model_kwargs", {})).to(device)
-    load_checkpoint(ann, os.path.join("runs", cfg["name"], "best.pt"), map_location=device)
+    ann_run = args.ann_run or cfg["name"]
+    load_checkpoint(ann, os.path.join("runs", ann_run, "best.pt"), map_location=device)
     ann.eval()
 
     # 2. Convert ANN → SNN (dùng train split để hiệu chỉnh)
