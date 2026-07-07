@@ -68,13 +68,13 @@ def aggregate(rows):
 
 
 def print_table(agg):
-    hdr = (f"{'Model':16s}{'FloodIoU(±std,n)':>21s}{'IoU/chip':>9s}{'F1':>7s}"
+    hdr = (f"{'Model':22s}{'FloodIoU(±std,n)':>21s}{'IoU/chip':>9s}{'F1':>7s}"
            f"{'pwIoU':>7s}{'Params':>8s}{'Energy(mJ)':>11s}")
     print(hdr); print("-" * len(hdr))
     for r in agg:
         fi = f"{r['flood_IoU']:.3f}±{r['flood_IoU_std']:.3f}(n{r['n']})"
         tag = " *SNN" if r["is_snn"] else ""
-        print(f"{r['model']:16s}{fi:>21s}{r['flood_IoU_chip']:9.3f}{r['flood_F1']:7.3f}"
+        print(f"{r['model']:22s}{fi:>21s}{r['flood_IoU_chip']:9.3f}{r['flood_F1']:7.3f}"
               f"{r['pw_IoU']:7.3f}{r['params_M']:8.2f}{r['energy_mJ']:11.1f}{tag}")
 
 
