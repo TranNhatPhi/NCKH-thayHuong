@@ -1,0 +1,6 @@
+_base_: base.yaml
+name: spiking_unet_lr5e5        # LR sweep SNN (đối xứng fairness với MobileNet)
+model: spiking_unet
+batch_size: 8
+lr: 0.00005
+model_kwargs: {base: 32, T: 4, encoding: direct}

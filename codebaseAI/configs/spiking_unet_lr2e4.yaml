@@ -1,0 +1,6 @@
+_base_: base.yaml
+name: spiking_unet_lr2e4        # LR sweep SNN
+model: spiking_unet
+batch_size: 8
+lr: 0.0002
+model_kwargs: {base: 32, T: 4, encoding: direct}
