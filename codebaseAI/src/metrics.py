@@ -21,6 +21,7 @@ class SegMetrics:
         self.flood = flood_class
         self.cm = np.zeros((num_classes, num_classes), dtype=np.int64)
         self.flood_ious = []          # flood-IoU từng chip (chỉ chip có flood trong GT)
+        self.perchip = []             # (chip_id, region, flood_iou) — cho Wilcoxon + per-region
 
     def update(self, pred, target):
         """Cộng dồn confusion matrix. pred/target: tensor int, shape (B,H,W) hoặc (H,W)."""
@@ -32,7 +33,7 @@ class SegMetrics:
         self.cm += np.bincount(self.n * t[k] + p[k],
                                minlength=self.n ** 2).reshape(self.n, self.n)
 
-    def update_perchip(self, pred, target):
+    def update_perchip(self, pred, target, chip_id=None):
         """Tính flood-IoU cho 1 chip; chỉ lưu nếu GT chip đó CÓ flood."""
         pred = pred.detach().cpu().numpy()
         target = target.detach().cpu().numpy()
@@ -43,7 +44,10 @@ class SegMetrics:
         pr = (pred == self.flood) & valid
         inter = np.logical_and(gt, pr).sum()
         union = np.logical_or(gt, pr).sum()
-        self.flood_ious.append(inter / union if union > 0 else 0.0)
+        iou = inter / union if union > 0 else 0.0
+        self.flood_ious.append(iou)
+        if chip_id is not None:
+            self.perchip.append((chip_id, str(chip_id).split("_")[0], float(iou)))
 
     def compute(self):
         cm = self.cm.astype(np.float64)

@@ -59,6 +59,7 @@ def main():
             optimizer.zero_grad()
             loss = criterion(model(s1), label)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.get("grad_clip", 5.0))
             optimizer.step()
             running += loss.item()
 

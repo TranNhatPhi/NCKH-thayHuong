@@ -9,3 +9,4 @@ segmentation-models-pytorch      # U-Net++, DeepLabV3, SegFormer (backbone ResNe
 spikingjelly                     # Spiking U-Net (SNN) + ANN2SNN
 requests                         # spikingjelly.ann2snn cần (import requests)
 ptflops                          # đếm MACs/FLOPs nhất quán (CNN + Transformer) cho đo năng lượng
+scipy                            # Wilcoxon (analysis.py)

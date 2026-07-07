@@ -73,6 +73,30 @@ def count_synops(model, sample_input, device="cpu"):
     return int(total[0])
 
 
+def mean_spike_rate(model, sample_input, device="cpu"):
+    """Tỉ lệ phát spike TRUNG BÌNH trên mọi nơ-ron LIF (0–1). Càng thấp = càng thưa = càng tiết kiệm."""
+    import torch
+    try:
+        from spikingjelly.activation_based import neuron
+    except ImportError:
+        return 0.0
+    total, count, handles = [0.0], [0], []
+
+    def hook(_m, _inp, out):
+        total[0] += float((out != 0).float().mean().item())
+        count[0] += 1
+
+    for m in model.modules():
+        if isinstance(m, neuron.BaseNode):
+            handles.append(m.register_forward_hook(hook))
+    model.eval()
+    with torch.no_grad():
+        model(sample_input.to(device))
+    for h in handles:
+        h.remove()
+    return total[0] / count[0] if count[0] else 0.0
+
+
 def is_spiking(model):
     """True nếu model chứa nơ-ron spiking (SpikingJelly)."""
     try:
