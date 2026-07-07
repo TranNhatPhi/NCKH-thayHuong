@@ -34,13 +34,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--n", type=int, default=6, help="số chip đưa lên hình")
+    ap.add_argument("--seed", type=int, default=None, help="seed của run (vd 0 → runs/<name>_s0)")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
     device = get_device()
+    run_name = cfg["name"] + (f"_s{args.seed}" if args.seed is not None else "")
     model = get_model(cfg["model"], in_channels=cfg.get("in_channels", 2),
                       num_classes=3, **cfg.get("model_kwargs", {})).to(device)
-    load_checkpoint(model, os.path.join("runs", cfg["name"], "best.pt"), map_location=device)
+    load_checkpoint(model, os.path.join("runs", run_name, "best.pt"), map_location=device)
     model.eval()
 
     ds = Sen1FloodsDataset(cfg["data_root"], "test")
@@ -75,7 +77,7 @@ def main():
     fig.suptitle(f"Qualitative — {cfg['name']}", fontsize=11)
     fig.tight_layout(rect=[0, 0.03, 1, 0.97])
 
-    out = os.path.join("runs", cfg["name"], "qualitative.png")
+    out = os.path.join("runs", run_name, "qualitative.png")
     fig.savefig(out, dpi=140)
     print(f"Đã lưu {out}")
 
