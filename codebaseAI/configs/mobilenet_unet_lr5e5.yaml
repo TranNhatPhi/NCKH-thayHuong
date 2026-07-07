@@ -1,0 +1,4 @@
+_base_: base.yaml
+name: mobilenet_unet_lr5e5      # LR sweep: kiểm MobileNet có mạnh nhờ may mắn lr không
+model: mobilenet_unet
+lr: 0.00005

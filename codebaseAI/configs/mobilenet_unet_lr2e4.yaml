@@ -1,0 +1,4 @@
+_base_: base.yaml
+name: mobilenet_unet_lr2e4      # LR sweep
+model: mobilenet_unet
+lr: 0.0002
