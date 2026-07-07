@@ -74,11 +74,11 @@ def main():
     te = get_dataloader(cfg["data_root"], "test", batch_size=1, num_workers=0)
     metric = SegMetrics()
     with torch.no_grad():
-        for s1, lab, _ in te:
+        for s1, lab, cid in te:
             s1, lab = s1.to(device), lab.to(device)
             pred = model(s1).argmax(1)
             metric.update(pred, lab)
-            metric.update_perchip(pred[0], lab[0])
+            metric.update_perchip(pred[0], lab[0], cid[0])
     res = metric.compute()
 
     # 4. Năng lượng (SynOps qua T bước)
@@ -90,6 +90,11 @@ def main():
 
     out_dir = os.path.join("runs", args.name)
     os.makedirs(out_dir, exist_ok=True)
+    import csv
+    with open(os.path.join(out_dir, "perchip.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["chip_id", "region", "flood_iou"])
+        w.writerows(metric.perchip)
     with open(os.path.join(out_dir, "test_metrics.json"), "w") as f:
         json.dump(res, f, indent=2, ensure_ascii=False)
     print(json.dumps(res, indent=2, ensure_ascii=False))
