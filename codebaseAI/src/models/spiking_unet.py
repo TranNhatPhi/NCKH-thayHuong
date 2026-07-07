@@ -1,84 +1,70 @@
 """
-★ ĐÓNG GÓP LÕI CỦA ĐỀ TÀI — Spiking U-Net (SNN).
+★ Spiking U-Net (SNN) — ĐÓNG GÓP LÕI. Bản MULTI-STEP (SpikingJelly).
 
-U-Net nhưng thay mọi ReLU bằng nơ-ron LIF (Leaky Integrate-and-Fire), huấn luyện
-trực tiếp bằng surrogate gradient (BPTT). Mã hóa input SAR theo kiểu "direct":
-lặp ảnh qua T bước, để lớp LIF đầu tự sinh spike; đầu ra là logits tích lũy /
-trung bình qua T bước → giữ CÙNG interface forward(x)->(B,num_classes,H,W) như CNN.
+Cải tiến so với bản cũ (vòng 2): dùng `layer.*` với step_mode='m' → xử lý cả T bước
+CÙNG LÚC, và `layer.BatchNorm2d` chuẩn hoá theo cả (T,B) — hiệu ứng giống tdBN,
+giúp train SNN tốt hơn hẳn so với BatchNorm thường + vòng lặp Python.
 
-Yêu cầu:  pip install spikingjelly
-Trạng thái: 🟡 SKELETON — cần kiểm thử forward/backward trên GPU + tinh chỉnh T, ngưỡng.
-
-Ghi chú thiết kế cần chốt (xem SNN-Flood_Pipeline.md):
-  * T (số bước): làm ablation {2,4,6,8}.
-  * Decoder: dùng membrane potential ở head (không spiking) để ra logits mượt.
-  * Đo năng lượng: gắn hook đếm spike ở energy.py (SynOps).
+Kiến trúc 4 tầng, KHỚP y hệt U-Net (unet.py) ~7.76M — chỉ khác LIF thay ReLU.
+Direct encoding: lặp ảnh qua T bước. Đầu ra = trung bình logits qua T.
+Yêu cầu: pip install spikingjelly
 """
 import torch
 import torch.nn as nn
 
 
-def _lif():
-    from spikingjelly.activation_based import neuron, surrogate
-    return neuron.LIFNode(tau=2.0, surrogate_function=surrogate.ATan(), detach_reset=True)
+def _block(cin, cout):
+    """Conv-BN-LIF ×2, đều multi-step."""
+    from spikingjelly.activation_based import layer, neuron, surrogate
 
-
-class SpikingDoubleConv(nn.Module):
-    def __init__(self, cin, cout):
-        super().__init__()
-        self.conv1 = nn.Conv2d(cin, cout, 3, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(cout)
-        self.sn1 = _lif()
-        self.conv2 = nn.Conv2d(cout, cout, 3, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(cout)
-        self.sn2 = _lif()
-
-    def forward(self, x):
-        x = self.sn1(self.bn1(self.conv1(x)))
-        x = self.sn2(self.bn2(self.conv2(x)))
-        return x
+    def lif():
+        return neuron.LIFNode(tau=2.0, surrogate_function=surrogate.ATan(),
+                              detach_reset=True, step_mode="m")
+    return nn.Sequential(
+        layer.Conv2d(cin, cout, 3, padding=1, bias=False, step_mode="m"),
+        layer.BatchNorm2d(cout, step_mode="m"),
+        lif(),
+        layer.Conv2d(cout, cout, 3, padding=1, bias=False, step_mode="m"),
+        layer.BatchNorm2d(cout, step_mode="m"),
+        lif(),
+    )
 
 
 class SpikingUNet(nn.Module):
     def __init__(self, in_channels=2, num_classes=3, base=32, T=4, encoding="direct"):
         super().__init__()
+        from spikingjelly.activation_based import layer
         self.T = T
         self.encoding = encoding
-        # 4 tầng — khớp Y HỆT U-Net (unet.py), chỉ khác LIF thay ReLU → cùng ~7.76M params
         c = [base, base * 2, base * 4, base * 8, base * 16]
-        self.d1 = SpikingDoubleConv(in_channels, c[0])
-        self.d2 = SpikingDoubleConv(c[0], c[1])
-        self.d3 = SpikingDoubleConv(c[1], c[2])
-        self.d4 = SpikingDoubleConv(c[2], c[3])
-        self.bott = SpikingDoubleConv(c[3], c[4])
-        self.pool = nn.MaxPool2d(2)
-        self.up4 = nn.ConvTranspose2d(c[4], c[3], 2, stride=2)
-        self.up3 = nn.ConvTranspose2d(c[3], c[2], 2, stride=2)
-        self.up2 = nn.ConvTranspose2d(c[2], c[1], 2, stride=2)
-        self.up1 = nn.ConvTranspose2d(c[1], c[0], 2, stride=2)
-        self.u4 = SpikingDoubleConv(c[4], c[3])
-        self.u3 = SpikingDoubleConv(c[3], c[2])
-        self.u2 = SpikingDoubleConv(c[2], c[1])
-        self.u1 = SpikingDoubleConv(c[1], c[0])
-        self.head = nn.Conv2d(c[0], num_classes, 1)      # đầu ra thực (không spiking)
+        self.d1 = _block(in_channels, c[0])
+        self.d2 = _block(c[0], c[1])
+        self.d3 = _block(c[1], c[2])
+        self.d4 = _block(c[2], c[3])
+        self.bott = _block(c[3], c[4])
+        self.pool = layer.MaxPool2d(2, step_mode="m")
+        self.up4 = layer.ConvTranspose2d(c[4], c[3], 2, stride=2, step_mode="m")
+        self.up3 = layer.ConvTranspose2d(c[3], c[2], 2, stride=2, step_mode="m")
+        self.up2 = layer.ConvTranspose2d(c[2], c[1], 2, stride=2, step_mode="m")
+        self.up1 = layer.ConvTranspose2d(c[1], c[0], 2, stride=2, step_mode="m")
+        self.u4 = _block(c[4], c[3])
+        self.u3 = _block(c[3], c[2])
+        self.u2 = _block(c[2], c[1])
+        self.u1 = _block(c[1], c[0])
+        self.head = layer.Conv2d(c[0], num_classes, 1, step_mode="m")
 
-    def _forward_once(self, x):
+    def forward(self, x):
+        from spikingjelly.activation_based import functional
+        functional.reset_net(self)
+        x = x.unsqueeze(0).repeat(self.T, 1, 1, 1, 1)      # [B,C,H,W] → [T,B,C,H,W]
         s1 = self.d1(x)
         s2 = self.d2(self.pool(s1))
         s3 = self.d3(self.pool(s2))
         s4 = self.d4(self.pool(s3))
         b = self.bott(self.pool(s4))
-        x = self.u4(torch.cat([self.up4(b), s4], 1))
-        x = self.u3(torch.cat([self.up3(x), s3], 1))
-        x = self.u2(torch.cat([self.up2(x), s2], 1))
-        x = self.u1(torch.cat([self.up1(x), s1], 1))
-        return self.head(x)
-
-    def forward(self, x):
-        from spikingjelly.activation_based import functional
-        functional.reset_net(self)               # xóa trạng thái màng trước mỗi mẫu
-        # direct encoding: cùng ảnh x đưa vào T bước; LIF tích lũy theo thời gian
-        out = 0.0
-        for _ in range(self.T):
-            out = out + self._forward_once(x)
-        return out / self.T                      # logits trung bình qua T bước
+        x = self.u4(torch.cat([self.up4(b), s4], dim=2))   # kênh ở dim=2 (T,B,C,H,W)
+        x = self.u3(torch.cat([self.up3(x), s3], dim=2))
+        x = self.u2(torch.cat([self.up2(x), s2], dim=2))
+        x = self.u1(torch.cat([self.up1(x), s1], dim=2))
+        out = self.head(x)                                 # [T,B,num_classes,H,W]
+        return out.mean(0)                                 # [B,num_classes,H,W]
