@@ -60,7 +60,14 @@ def main():
     from spikingjelly.activation_based import ann2snn
     calib = get_dataloader(cfg["data_root"], "train", batch_size=4, num_workers=0,
                            crop_size=cfg.get("crop_size"))
-    snn = ann2snn.Converter(mode="max", dataloader=calib)(ann).to(device)
+    # Converter mong (ảnh, nhãn) 2 phần tử; dataset mình trả (s1, label, cid) → bọc lại
+    class _Calib:
+        def __init__(self, loader): self.loader = loader
+        def __len__(self): return len(self.loader)
+        def __iter__(self):
+            for s1, lab, _ in self.loader:
+                yield s1, lab
+    snn = ann2snn.Converter(mode="max", dataloader=_Calib(calib))(ann).to(device)
     model = SNNWrapper(snn, args.T).to(device).eval()
 
     # 3. Đánh giá trên test (T bước)
