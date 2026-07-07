@@ -9,6 +9,37 @@
 
 ---
 
+## 0.0 CẬP NHẬT ĐỊNH HƯỚNG (07/07/2026 — chốt với thầy sau khi có kết quả n=3)
+
+> Thầy đã duyệt: *"Ok có thể bắt tay viết paper với kết quả hiện tại rồi đó Phi"*. Các mục dưới **thay thế** framing cũ (binary / "SNN thắng CNN"). Framing mới = **phân tích đánh đổi năng lượng–độ chính xác trung thực** + baseline SNN đầu tiên trên Sen1Floods11.
+
+### Tiêu đề chốt
+**"Energy-Accuracy Trade-offs in Spiking U-Net for SAR Flood Mapping: A Systematic Study on Sen1Floods11"**
+
+### Bài toán (cập nhật): **3 lớp** flood-on-land
+0 = background, 1 = permanent water (dùng JRC tách), 2 = flood. (Khó hơn binary water → giải thích rõ vì sao IoU tuyệt đối khiêm tốn.)
+
+### 3 đóng góp chốt (theo thầy)
+1. **First direct-trained SNN baseline** cho 3-class flood-on-land segmentation trên Sen1Floods11 (chỉ dùng S1 SAR, 446 chip hand-labeled).
+2. **Empirical characterization of T-stability regime** của Spiking U-Net: **T=2 và T=8 ổn định, T=4 và T=6 bimodal/bất ổn** (std ~0.12–0.13) → *phát hiện mới*. Đang chạy thêm **T=1,3,5,7,10 (×3 seed)** để xác nhận "T ổn định là hiếm". Ghi nhận thêm: **LR của SNN ảnh hưởng tới ĐỘ ỔN ĐỊNH nhiều hơn tới accuracy**.
+3. **Pareto analysis** SNN vs CNN vs Transformer vs ANN2SNN trên trục năng lượng–accuracy:
+   - Dải **60–200 mJ**: **MobileNet-UNet thắng** không bàn cãi (0.52 IoU @ 63 mJ; tune LR 2e-4 quan trọng).
+   - Dải **< 40 mJ**: **SNN-T2 là lựa chọn học được DUY NHẤT còn giữ accuracy > 0.30** (0.381 @ 33 mJ) — MobileNet không xuống dưới 63 mJ → **SNN-T2 hợp cho thiết bị biên thực sự**.
+   - **ANN2SNN thất bại** kể cả T=128 (0.21 @ 440 mJ, đắt hơn cả ANN gốc) → **direct-training vượt trội conversion**.
+
+### Điểm nhấn khi viết bản thảo (theo thầy)
+- **SNN đã học được lớp permanent-water** (pwIoU khá ở T2/T8) — nêu rõ.
+- Viết tập trung **cả SNN-T2 (năng lượng thấp nhất)** *và* **SNN-T8 (cân bằng — pwIoU cao nhất họ SNN, 0.606)**.
+- **T4/T6 bất ổn → biến thành phát hiện mới** (thách thức train SNN sâu cho segmentation), không giấu.
+
+### Thí nghiệm bổ sung đang chạy (theo yêu cầu thầy)
+- [ ] T-sweep mở rộng **T=1,3,5,7,10** (×3 seed) → xác nhận vùng bimodal. *(configs + `run_advisor.sh`)*
+- [ ] **Retrain T2 & T8 với LR 2e-4** (recipe MobileNet đang thắng) → xem có lên **0.42–0.45**? Nếu T8+LR2e-4 đạt ~0.42 là ok.
+- [ ] **MobileNet-UNet INT8** (PTQ) → thêm điểm Pareto "ANN nén" ở dải năng lượng cực thấp. *(`quantize_int8.py`)*
+- [x] **ANN2SNN**: số liệu hiện tại (T32/64/128, n=3) **đã đủ** — thầy chốt không cần thêm.
+
+---
+
 ## 0. Thông tin định hướng
 
 | Mục | Nội dung |

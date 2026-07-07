@@ -1,0 +1,6 @@
+_base_: base.yaml
+name: spiking_unet_T8_lr2e4  # T8 với recipe LR 2e-4 (xem có lên 0.42-0.45 không)
+model: spiking_unet
+batch_size: 8
+lr: 0.0002
+model_kwargs: {base: 32, T: 8, encoding: direct}

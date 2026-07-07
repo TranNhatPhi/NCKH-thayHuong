@@ -10,8 +10,14 @@ Trạng thái:
   * FLOPs/params (ANN): ✅ qua `fvcore` hoặc `thop` nếu đã cài.
   * SynOps (SNN): 🟡 skeleton — gắn forward-hook đếm spike ở mỗi lớp LIF.
 """
-E_MAC_45NM = 4.6e-12      # J / phép MAC
-E_AC_45NM = 0.9e-12       # J / phép AC
+E_MAC_45NM = 4.6e-12      # J / phép MAC (FP32, Horowitz 2014)
+E_AC_45NM = 0.9e-12       # J / phép AC  (cộng dồn spike)
+E_MAC_INT8_45NM = 0.23e-12  # J / phép MAC INT8 (8b mult 0.2pJ + 8b add 0.03pJ) — cho quantization
+
+
+def int8_energy_joules(macs):
+    """Năng lượng nếu chạy INT8 (cùng số MAC, mỗi MAC rẻ hơn ~20× so với FP32)."""
+    return macs * E_MAC_INT8_45NM
 
 
 def count_flops_params(model, input_shape=(1, 2, 512, 512), device="cpu"):
