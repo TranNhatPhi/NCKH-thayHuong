@@ -8,6 +8,7 @@
 #   - summarize + analysis (Wilcoxon + per-region)
 # Chạy trong tmux:  bash run_all2.sh 2>&1 | tee runs/run_all2.log   (~1.5–2h)
 # ============================================================================
+command -v python >/dev/null 2>&1 || { [ -f /venv/main/bin/activate ] && source /venv/main/bin/activate; }
 SEEDS="0 1 2"
 run(){ echo ">>> $*"; "$@" || echo "!!! FAILED: $*"; }
 

@@ -7,6 +7,9 @@
 # Chạy trong tmux:  bash run_full.sh 2>&1 | tee runs/run_full.log   (~2.5–3h)
 # 1 run lỗi KHÔNG dừng cả script.
 # ============================================================================
+# Kích hoạt venv nếu shell chưa có python (vd tmux mới không auto-activate)
+command -v python >/dev/null 2>&1 || { [ -f /venv/main/bin/activate ] && source /venv/main/bin/activate; }
+
 SEEDS="0 1 2"
 run(){ echo ">>> $*"; "$@" || echo "!!! FAILED: $*"; }
 
