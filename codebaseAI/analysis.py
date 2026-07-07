@@ -23,12 +23,19 @@ def base_name(name):
     return re.sub(r"_s\d+$", "", name)
 
 
+def is_junk(name):
+    return name.endswith(("_OLDn1bak", "_bak", "_backup"))   # dir cách ly, bỏ qua
+
+
 def load():
     """model → chip_id → flood_iou (trung bình qua các seed). + map chip→region."""
     raw = defaultdict(lambda: defaultdict(list))
     region = {}
     for f in glob.glob("runs/*/perchip.csv"):
-        model = base_name(os.path.basename(os.path.dirname(f)))
+        dirname = os.path.basename(os.path.dirname(f))
+        if is_junk(dirname):
+            continue
+        model = base_name(dirname)
         with open(f) as fh:
             for row in csv.DictReader(fh):
                 raw[model][row["chip_id"]].append(float(row["flood_iou"]))

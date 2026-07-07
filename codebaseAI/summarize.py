@@ -20,10 +20,16 @@ def base_name(name):
     return re.sub(r"_s\d+$", "", name)          # bỏ hậu tố _s0/_s1... để gộp multi-seed
 
 
+def is_junk(name):
+    return name.endswith(("_OLDn1bak", "_bak", "_backup"))   # dir cách ly, bỏ qua
+
+
 def load_rows():
     rows = []
     for f in sorted(glob.glob("runs/*/test_metrics.json")):
         name = os.path.basename(os.path.dirname(f))
+        if is_junk(name):
+            continue
         d = json.load(open(f))
         rows.append({
             "model": name, "base": base_name(name),
