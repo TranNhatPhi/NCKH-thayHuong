@@ -15,22 +15,13 @@ E_AC_45NM = 0.9e-12       # J / phép AC
 
 
 def count_flops_params(model, input_shape=(1, 2, 512, 512), device="cpu"):
-    """Đếm FLOPs & số tham số cho model ANN. Trả về (flops, params)."""
-    import torch
-    x = torch.randn(*input_shape, device=device)
-    try:
-        from fvcore.nn import FlopCountAnalysis, parameter_count
-        flops = FlopCountAnalysis(model.to(device), x).total()
-        params = parameter_count(model)[""]        # khóa "" = TỔNG (đừng cộng cả submodule)
-        return int(flops), int(params)
-    except ImportError:
-        pass
-    try:
-        from thop import profile
-        flops, params = profile(model.to(device), inputs=(x,), verbose=False)
-        return int(flops), int(params)
-    except ImportError:
-        raise ImportError("Cần cài `fvcore` hoặc `thop` để đếm FLOPs.")
+    """Đếm MACs & params cho model ANN bằng ptflops — đếm NHẤT QUÁN cả CNN lẫn
+    Transformer (fvcore bỏ sót op transformer). Trả về (macs, params)."""
+    from ptflops import get_model_complexity_info
+    macs, params = get_model_complexity_info(
+        model.to(device).eval(), tuple(input_shape[1:]),
+        as_strings=False, print_per_layer_stat=False, verbose=False)
+    return int(macs), int(params)
 
 
 def ann_energy_joules(flops):

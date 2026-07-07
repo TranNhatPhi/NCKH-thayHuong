@@ -1,0 +1,3 @@
+_base_: base.yaml
+name: unet_smp           # U-Net ResNet-34 pretrain ImageNet (baseline mạnh, khớp Banerjee 2026)
+model: unet_smp

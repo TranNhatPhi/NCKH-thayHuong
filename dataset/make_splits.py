@@ -128,7 +128,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=".")
     ap.add_argument("--val_ratio", type=float, default=0.2)
-    ap.add_argument("--test_ratio", type=float, default=0.2)
+    ap.add_argument("--test_ratio", type=float, default=0.1)   # 70/20/10 (giống Banerjee 2026)
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 

@@ -41,16 +41,22 @@ class FocalLoss(nn.Module):
 
 
 class CombinedLoss(nn.Module):
-    """w_ce·CE + w_dice·Dice + w_focal·Focal (mặc định = tổng đều)."""
+    """w_ce·CE(weighted) + w_dice·Dice + w_focal·Focal.
+    class_weights: trọng số lớp, vd [1, 5, 2] (nền, nước thường trực, nước lũ) —
+    nâng cao lớp permanent-water hiếm để nó được học (chống mất cân bằng)."""
     def __init__(self, num_classes=3, ignore_index=-1,
-                 w_ce=1.0, w_dice=1.0, w_focal=1.0, gamma=2.0):
+                 w_ce=1.0, w_dice=1.0, w_focal=1.0, gamma=2.0, class_weights=None):
         super().__init__()
-        self.ce = nn.CrossEntropyLoss(ignore_index=ignore_index)
+        self.ignore = ignore_index
+        self.weight = (torch.tensor(class_weights, dtype=torch.float32)
+                       if class_weights else None)
         self.dice = DiceLoss(num_classes, ignore_index)
         self.focal = FocalLoss(gamma, ignore_index)
         self.w_ce, self.w_dice, self.w_focal = w_ce, w_dice, w_focal
 
     def forward(self, logits, target):
-        return (self.w_ce * self.ce(logits, target)
+        w = self.weight.to(logits.device) if self.weight is not None else None
+        ce = F.cross_entropy(logits, target, weight=w, ignore_index=self.ignore)
+        return (self.w_ce * ce
                 + self.w_dice * self.dice(logits, target)
                 + self.w_focal * self.focal(logits, target))

@@ -21,11 +21,15 @@ from src.metrics import SegMetrics
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
-    cfg = load_config(ap.parse_args().config)
+    ap.add_argument("--seed", type=int, default=None, help="ghi đè seed để chạy multi-seed")
+    args = ap.parse_args()
+    cfg = load_config(args.config)
 
-    set_seed(cfg.get("seed", 42))
+    seed = args.seed if args.seed is not None else cfg.get("seed", 42)
+    set_seed(seed)
+    run_name = cfg["name"] + (f"_s{seed}" if args.seed is not None else "")
     device = get_device()
-    print(f"[{cfg['name']}] model={cfg['model']} device={device}")
+    print(f"[{run_name}] model={cfg['model']} seed={seed} device={device}")
 
     train_loader = get_dataloader(
         cfg["data_root"], "train", batch_size=cfg["batch_size"],
@@ -43,7 +47,7 @@ def main():
     optimizer = AdamW(model.parameters(), lr=cfg["lr"],
                       weight_decay=cfg.get("weight_decay", 1e-4))
 
-    out_dir = os.path.join("runs", cfg["name"])
+    out_dir = os.path.join("runs", run_name)
     os.makedirs(out_dir, exist_ok=True)
     best, bad, patience = -1.0, 0, cfg.get("patience", 8)
 

@@ -21,3 +21,8 @@ codebaseAI/runs/
 
 # ============ Hệ thống ============
 .DS_Store
+
+# File backup nặng - không đưa lên git
+*.tar.gz
+*.zip
+*.pdf

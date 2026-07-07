@@ -10,11 +10,13 @@ crop_size: 256                 # train cắt 256; val/test giữ full 512
 per_channel_norm: false        # true = chuẩn hóa min/max riêng từng kênh (ablation)
 
 # Huấn luyện
-batch_size: 16          # H100 94GB dư sức; tăng 32 nếu muốn nhanh hơn nữa
+batch_size: 32          # H100 94GB dư sức; tăng 32 nếu muốn nhanh hơn nữa
 lr: 0.0001
 weight_decay: 0.0001
-epochs: 80
-patience: 8                    # early-stop theo flood_IoU
+epochs: 100
+patience: 15                   # early-stop theo flood_IoU (nới rộng vì có pretrain)
+seed: 42                       # đổi qua --seed để chạy multi-seed
 
-# Loss = CE(ignore -1) + Dice + Focal
-loss_kwargs: {w_ce: 1.0, w_dice: 1.0, w_focal: 1.0, gamma: 2.0}
+# Loss = CE(weighted, ignore -1) + Dice + Focal
+# class_weights [nền, nước thường trực, nước lũ]: nâng permanent-water hiếm
+loss_kwargs: {w_ce: 1.0, w_dice: 1.0, w_focal: 1.0, gamma: 2.0, class_weights: [1.0, 5.0, 2.0]}

@@ -13,7 +13,8 @@ Bảng model:
   Không học (đặc biệt):  otsu  (xử lý riêng trong evaluate.py)
 """
 
-LEARNABLE = ["unet", "unetpp", "deeplabv3", "segformer", "spiking_unet", "ann2snn"]
+LEARNABLE = ["unet", "unet_smp", "mobilenet_unet", "unetpp", "deeplabv3",
+             "segformer", "spiking_unet", "ann2snn"]
 CLASSICAL = ["otsu"]
 
 
@@ -22,6 +23,12 @@ def get_model(name, in_channels=2, num_classes=3, **kwargs):
     if name == "unet":
         from .unet import UNet
         return UNet(in_channels, num_classes, **kwargs)
+    if name == "unet_smp":
+        from .unet_smp import build_unet_smp
+        return build_unet_smp(in_channels, num_classes, **kwargs)
+    if name == "mobilenet_unet":
+        from .unet_smp import build_unet_smp
+        return build_unet_smp(in_channels, num_classes, encoder="mobilenet_v2", **kwargs)
     if name == "unetpp":
         from .unetpp import build_unetpp
         return build_unetpp(in_channels, num_classes, **kwargs)

@@ -18,10 +18,10 @@ from src.metrics import SegMetrics
 from src import energy as E
 
 
-def evaluate_learned(cfg, device):
+def evaluate_learned(cfg, device, run_name):
     model = get_model(cfg["model"], in_channels=cfg.get("in_channels", 2),
                       num_classes=3, **cfg.get("model_kwargs", {})).to(device)
-    load_checkpoint(model, os.path.join("runs", cfg["name"], "best.pt"), map_location=device)
+    load_checkpoint(model, os.path.join("runs", run_name, "best.pt"), map_location=device)
     model.eval()
 
     loader = get_dataloader(cfg["data_root"], "test", batch_size=1, num_workers=2,
@@ -72,13 +72,16 @@ def evaluate_otsu(cfg):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
-    cfg = load_config(ap.parse_args().config)
+    ap.add_argument("--seed", type=int, default=None)
+    args = ap.parse_args()
+    cfg = load_config(args.config)
     device = get_device()
+    run_name = cfg["name"] + (f"_s{args.seed}" if args.seed is not None else "")
 
-    res = evaluate_otsu(cfg) if cfg["model"] == "otsu" else evaluate_learned(cfg, device)
+    res = evaluate_otsu(cfg) if cfg["model"] == "otsu" else evaluate_learned(cfg, device, run_name)
     print(json.dumps(res, indent=2, ensure_ascii=False))
 
-    out = os.path.join("runs", cfg["name"], "test_metrics.json")
+    out = os.path.join("runs", run_name, "test_metrics.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w") as f:
         json.dump(res, f, indent=2, ensure_ascii=False)

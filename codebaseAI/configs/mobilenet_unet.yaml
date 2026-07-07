@@ -1,0 +1,3 @@
+_base_: base.yaml
+name: mobilenet_unet     # U-Net MobileNetV2 pretrain — ĐỐI THỦ NĂNG LƯỢNG (CNN nhẹ)
+model: mobilenet_unet
