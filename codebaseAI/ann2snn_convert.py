@@ -81,12 +81,19 @@ def main():
             metric.update_perchip(pred[0], lab[0], cid[0])
     res = metric.compute()
 
-    # 4. Năng lượng (SynOps qua T bước)
+    # 4. Năng lượng (SynOps qua T bước) + spike rate
     res["params_M"] = round(count_params(snn) / 1e6, 3)
     dummy = torch.randn(1, cfg.get("in_channels", 2), 512, 512, device=device)
     synops = E.count_synops(model, dummy, device)
     res["SynOps_G"] = round(synops / 1e9, 3)
     res["energy_mJ_SNN"] = round(E.snn_energy_joules(synops) * 1e3, 4)
+    # spike_rate: bản trước KHÔNG đo -> summarize hiện 0.0% (thầy bắt debug). Đo như SNN direct.
+    n_spk = E.count_spiking_nodes(model)
+    res["spike_rate"] = round(E.mean_spike_rate(model, dummy, device), 4)
+    print(f"[debug spike] ann2snn: {n_spk} nơ-ron spiking, spike_rate={res['spike_rate']}")
+    if n_spk == 0:
+        print("[debug spike] CẢNH BÁO: 0 nơ-ron spiking tìm thấy — converted model không dùng "
+              "neuron.BaseNode; spike_rate sẽ =0 (dùng SynOps làm thước đo năng lượng chính).")
 
     out_dir = os.path.join("runs", args.name)
     os.makedirs(out_dir, exist_ok=True)

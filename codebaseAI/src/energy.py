@@ -109,6 +109,15 @@ def mean_spike_rate(model, sample_input, device="cpu"):
     return total[0] / count[0] if count[0] else 0.0
 
 
+def count_spiking_nodes(model):
+    """Đếm số nơ-ron spiking (neuron.BaseNode) — để debug spike_rate (vd ANN2SNN)."""
+    try:
+        from spikingjelly.activation_based import neuron
+        return sum(1 for m in model.modules() if isinstance(m, neuron.BaseNode))
+    except ImportError:
+        return 0
+
+
 def is_spiking(model):
     """True nếu model chứa nơ-ron spiking (SpikingJelly)."""
     try:
