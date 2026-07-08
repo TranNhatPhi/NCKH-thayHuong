@@ -14,6 +14,8 @@ echo "==> 1. Cài phụ thuộc Python"
 pip install -r requirements.txt
 # SpikingJelly chạy nhanh hơn với CUDA kernel (tùy chọn; chọn đúng bản CUDA):
 pip install cupy-cuda12x 2>/dev/null || echo "   (bỏ qua cupy — SNN vẫn chạy bằng backend torch)"
+# torchao cho thử INT4 (không bắt buộc; thiếu thì quantize_int4.py tự ghi 'unsupported'):
+pip install torchao 2>/dev/null || echo "   (bỏ qua torchao — INT4 sẽ báo unsupported, vẫn là finding)"
 
 echo "==> 2. Kiểm tra GPU (quan trọng cho RTX 50-series / Blackwell)"
 python -c "

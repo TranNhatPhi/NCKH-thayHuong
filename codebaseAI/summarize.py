@@ -41,6 +41,7 @@ def load_rows():
             "params_M": d.get("params_M", 0.0),
             "compute_G": d.get("SynOps_G", d.get("FLOPs_G", 0.0)),
             "energy_mJ": d.get("energy_mJ_SNN", d.get("energy_mJ_ANN", 0.0)),
+            "spike_rate": d.get("spike_rate", 0.0),
             "is_snn": "SynOps_G" in d,
         })
     return rows
@@ -62,20 +63,22 @@ def aggregate(rows):
             "flood_IoU_chip": mean("flood_IoU_chip"), "flood_F1": mean("flood_F1"),
             "pw_IoU": mean("pw_IoU"), "mIoU": mean("mIoU"),
             "params_M": rs[0]["params_M"], "compute_G": rs[0]["compute_G"],
-            "energy_mJ": rs[0]["energy_mJ"], "is_snn": rs[0]["is_snn"],
+            "energy_mJ": rs[0]["energy_mJ"], "spike_rate": mean("spike_rate"),
+            "is_snn": rs[0]["is_snn"],
         })
     return sorted(agg, key=lambda x: -x["flood_IoU"])
 
 
 def print_table(agg):
     hdr = (f"{'Model':22s}{'FloodIoU(±std,n)':>21s}{'IoU/chip':>9s}{'F1':>7s}"
-           f"{'pwIoU':>7s}{'Params':>8s}{'Energy(mJ)':>11s}")
+           f"{'pwIoU':>7s}{'Params':>8s}{'Energy(mJ)':>11s}{'Spike%':>8s}")
     print(hdr); print("-" * len(hdr))
     for r in agg:
         fi = f"{r['flood_IoU']:.3f}±{r['flood_IoU_std']:.3f}(n{r['n']})"
         tag = " *SNN" if r["is_snn"] else ""
+        spk = f"{r['spike_rate']*100:7.1f}" if r["is_snn"] else f"{'-':>7s}"
         print(f"{r['model']:22s}{fi:>21s}{r['flood_IoU_chip']:9.3f}{r['flood_F1']:7.3f}"
-              f"{r['pw_IoU']:7.3f}{r['params_M']:8.2f}{r['energy_mJ']:11.1f}{tag}")
+              f"{r['pw_IoU']:7.3f}{r['params_M']:8.2f}{r['energy_mJ']:11.1f}{spk}{tag}")
 
 
 def save_csv(agg, path="runs/summary.csv"):

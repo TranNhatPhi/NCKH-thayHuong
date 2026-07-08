@@ -29,9 +29,12 @@ done
 echo "===== Otsu (không train) × 3 seed ====="
 for s in $SEEDS; do run python evaluate.py --config configs/otsu.yaml --seed $s; done
 
-echo "===== ANN2SNN quét T=32/64/128 ====="
+echo "===== ANN2SNN quét T=32/64/128 (x3 seed nguồn: unet_smp_s0/s1/s2 -> có σ) ====="
 for T in 32 64 128; do
-  run python ann2snn_convert.py --ann_config configs/unet_smp.yaml --ann_run unet_smp_s0 --T $T --name ann2snn_T$T
+  for s in $SEEDS; do
+    run python ann2snn_convert.py --ann_config configs/unet_smp.yaml \
+      --ann_run unet_smp_s$s --T $T --name ann2snn_T${T}_s${s}
+  done
 done
 
 echo "===== Tổng hợp + phân tích ====="

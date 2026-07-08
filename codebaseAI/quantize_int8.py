@@ -9,8 +9,15 @@ Năng lượng = số MAC (không đổi) × E_MAC_INT8 (~0.23pJ, rẻ ~20× so 
     python quantize_int8.py --seed 0
     python quantize_int8.py --src_run mobilenet_unet_lr2e4_s0 --name mobilenet_int8_s0
 
-Ghi chú: kernel INT8 (fbgemm/x86) chạy trên CPU → eval để trên CPU.
-Nếu FX không trace được model (một số op smp), script báo lỗi rõ để ta xử lý.
+Ghi chú recipe (để verify với thầy):
+  * Phương pháp: **PTQ (post-training static)** — không cần train lại, hiệu chỉnh (calibrate)
+    thống kê activation trên train split. (QAT sẽ chính xác hơn nhưng phải train lại; nêu
+    trong Discussion như hướng cải thiện nếu PTQ tụt accuracy nhiều.)
+  * Calibration set: lấy `--calib_batches` batch từ TRAIN split (mặc định 50 → ~200 ảnh,
+    đủ đại diện cho phân bố activation).
+  * qconfig: per-channel weight + per-tensor activation (mặc định backend x86/fbgemm).
+  * kernel INT8 chạy trên CPU → eval để trên CPU. Nếu FX không trace được model smp,
+    script báo lỗi rõ để ta chuyển sang eager-mode PTQ.
 """
 import argparse
 import copy
@@ -35,7 +42,7 @@ def main():
     ap.add_argument("--seed", type=int, default=None,
                     help="tiện lợi: tự suy src_run/name theo seed")
     ap.add_argument("--name", default=None, help="tên run đầu ra (mặc định mobilenet_int8[_sN])")
-    ap.add_argument("--calib_batches", type=int, default=20, help="số batch train để hiệu chỉnh")
+    ap.add_argument("--calib_batches", type=int, default=50, help="số batch train để hiệu chỉnh")
     args = ap.parse_args()
 
     cfg = load_config(args.config)

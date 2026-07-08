@@ -76,6 +76,36 @@ def wilcoxon_vs(avg, ref):
     _write_csv(f"wilcoxon_vs_{ref}.csv", ["model", "ref_mean", "model_mean", "p_value", "significant"], rows)
 
 
+def wilcoxon_pairs(avg, pairs):
+    """Wilcoxon per-chip cho các CẶP model cụ thể (theo yêu cầu thầy)."""
+    print("\n== Wilcoxon per-chip cho các cặp quan trọng ==")
+    print(f"{'Cặp A vs B':44s}{'A':>8s}{'B':>8s}{'p-value':>10s}  kết luận")
+    print("-" * 92)
+    rows = []
+    for a_name, b_name in pairs:
+        if a_name not in avg or b_name not in avg:
+            miss = a_name if a_name not in avg else b_name
+            print(f"{a_name+' vs '+b_name:44s}  [!] thiếu '{miss}' — bỏ qua")
+            continue
+        common = sorted(set(avg[a_name]) & set(avg[b_name]))
+        if len(common) < 5:
+            print(f"{a_name+' vs '+b_name:44s}  [!] <5 chip chung — bỏ qua")
+            continue
+        a = np.array([avg[a_name][c] for c in common])
+        b = np.array([avg[b_name][c] for c in common])
+        try:
+            _, p = wilcoxon(a, b)
+        except ValueError:
+            p = float("nan")
+        sig = "significant (p<0.05)" if p < 0.05 else "ns (không chắc khác)"
+        print(f"{a_name+' vs '+b_name:44s}{a.mean():8.3f}{b.mean():8.3f}{p:10.4f}  {sig}")
+        rows.append({"pair": f"{a_name} vs {b_name}", "A_mean": round(a.mean(), 4),
+                     "B_mean": round(b.mean(), 4), "p_value": round(p, 4),
+                     "significant": int(p < 0.05)})
+    if rows:
+        _write_csv("wilcoxon_pairs.csv", ["pair", "A_mean", "B_mean", "p_value", "significant"], rows)
+
+
 def per_region(avg, region):
     """In dạng model-theo-hàng, vùng-theo-cột (gọn hơn, không wrap) + xuất CSV."""
     print("\n== Per-region flood-IoU (hàng = model, cột = vùng) ==")
@@ -111,11 +141,19 @@ def _write_csv(fname, fields, rows):
 
 
 if __name__ == "__main__":
+    # Cặp mặc định theo yêu cầu thầy
+    default_pairs = ("unet_smp:mobilenet_int8,"
+                     "mobilenet_int8:spiking_unet_T6,"
+                     "spiking_unet_T2:spiking_unet_T6")
     ap = argparse.ArgumentParser()
     ap.add_argument("--ref", default="spiking_unet_T4", help="model tham chiếu cho Wilcoxon")
+    ap.add_argument("--pairs", default=default_pairs,
+                    help="các cặp 'A:B' phân tách bởi dấu phẩy cho Wilcoxon per-chip")
     args = ap.parse_args()
     avg, region = load()
     if not avg:
         raise SystemExit("Không thấy runs/*/perchip.csv — chạy lại evaluate.py (bản mới) trước.")
     wilcoxon_vs(avg, args.ref)
+    pairs = [tuple(p.split(":")) for p in args.pairs.split(",") if ":" in p]
+    wilcoxon_pairs(avg, pairs)
     per_region(avg, region)

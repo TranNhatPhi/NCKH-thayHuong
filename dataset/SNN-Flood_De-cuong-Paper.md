@@ -32,11 +32,20 @@
 - Viết tập trung **cả SNN-T2 (năng lượng thấp nhất)** *và* **SNN-T8 (cân bằng — pwIoU cao nhất họ SNN, 0.606)**.
 - **T4/T6 bất ổn → biến thành phát hiện mới** (thách thức train SNN sâu cho segmentation), không giấu.
 
-### Thí nghiệm bổ sung đang chạy (theo yêu cầu thầy)
+### Thí nghiệm bổ sung (theo yêu cầu thầy — vòng 1)
 - [ ] T-sweep mở rộng **T=1,3,5,7,10** (×3 seed) → xác nhận vùng bimodal. *(configs + `run_advisor.sh`)*
 - [ ] **Retrain T2 & T8 với LR 2e-4** (recipe MobileNet đang thắng) → xem có lên **0.42–0.45**? Nếu T8+LR2e-4 đạt ~0.42 là ok.
 - [ ] **MobileNet-UNet INT8** (PTQ) → thêm điểm Pareto "ANN nén" ở dải năng lượng cực thấp. *(`quantize_int8.py`)*
-- [x] **ANN2SNN**: số liệu hiện tại (T32/64/128, n=3) **đã đủ** — thầy chốt không cần thêm.
+- [x] **ANN2SNN**: số liệu hiện tại (T32/64/128) **đã đủ** — nhưng chạy **3 seed** để có σ (fix trong `run_full.sh`).
+
+### Thí nghiệm bổ sung (theo yêu cầu thầy — vòng 2)
+- [ ] **T=6 chạy 5 seed** (điểm nghi vấn cao nhất) → verify lucky hay stable. *(`run_advisor.sh`)*
+- [ ] **Verify INT8 recipe**: PTQ (đang dùng) vs QAT; calibration set ~200 ảnh train (nâng `--calib_batches=50`). *(`quantize_int8.py`)*
+- [ ] **INT4 cho MobileNet-UNet**: thử `torchao int4_weight_only`. Dự kiến **UNSUPPORTED cho Conv2d** (chỉ nén Linear) → **nếu INT4 fail thì củng cố ngách năng lượng của SNN**. *(`quantize_int4.py`)*
+- [ ] **Wilcoxon per-chip theo cặp**: `unet_smp vs mobilenet_int8` (kỳ vọng significant), `mobilenet_int8 vs SNN_T6` (chắc significant), `SNN_T2 vs SNN_T6` (T6 có thực sự tốt hơn?). *(`analysis.py --pairs`)*
+- [ ] **Spike rate** cho SNN_T2/T5/T6/T8 → hoàn thiện SynOps (đã thêm cột `Spike%` vào `summarize.py`).
+
+> **Thầy chốt (08/07/2026):** *"Kết quả không như dự định ban đầu về SNN nhưng có kho dữ liệu benchmark đầy đủ để viết được paper với câu chuyện khác như trên cũng ok á Phi."* → xác nhận đi theo framing benchmark/trade-off.
 
 ---
 

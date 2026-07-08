@@ -10,3 +10,4 @@ spikingjelly                     # Spiking U-Net (SNN) + ANN2SNN
 requests                         # spikingjelly.ann2snn cần (import requests)
 ptflops                          # đếm MACs/FLOPs nhất quán (CNN + Transformer) cho đo năng lượng
 scipy                            # Wilcoxon (analysis.py)
+# torchao — cài riêng (không bắt buộc) trong setup_vast.sh cho INT4; xem quantize_int4.py

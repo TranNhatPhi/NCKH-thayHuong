@@ -29,12 +29,23 @@ for cfg in spiking_unet_T2_lr2e4 spiking_unet_T8_lr2e4; do
   done
 done
 
-echo "===== 3) MobileNet-UNet INT8 PTQ (x3 seed, nguồn = mobilenet_unet_lr2e4_sN) ====="
+echo "===== 3) T=6 thêm seed 3,4 (=> n=5, verify lucky hay stable) ====="
+for s in 3 4; do
+  run python train.py    --config configs/spiking_unet_T6.yaml --seed $s
+  run python evaluate.py --config configs/spiking_unet_T6.yaml --seed $s
+done
+
+echo "===== 4) MobileNet-UNet INT8 PTQ (x3 seed, nguồn = mobilenet_unet_lr2e4_sN) ====="
 for s in $SEEDS; do
   run python quantize_int8.py --seed $s
 done
 
-echo "===== 4) Tổng hợp + phân tích ====="
+echo "===== 5) MobileNet-UNet INT4 (thử — fail cũng là finding) ====="
+for s in $SEEDS; do
+  run python quantize_int4.py --seed $s
+done
+
+echo "===== 6) Tổng hợp + phân tích ====="
 run python summarize.py
 run python analysis.py --ref spiking_unet_T4
 
