@@ -61,7 +61,7 @@ Because flood-IoU differences between strong models are small, point estimates a
 Sen1Floods11 hand-labeled subset: **446 chips** of 512×512, 2 channels (VV/VH, dB), spanning **11 flood events / regions** (Bolivia, Ghana, India, Mekong, Nigeria, Pakistan, Paraguay, Somalia, Spain, Sri-Lanka, USA). 3-class labels derived as in §3.1.
 
 ### 4.2 Preprocessing & splits
-dB values clipped to [−50, 0] and normalized to [0, 1]; NaN → ignore-index. Chips are split into train/validation/test **stratified by region** with a fixed seed for reproducibility: **312 / 88 / 45 chips** (≈ 70/20/10). `[⚠️ CHỐT VỚI THẦY: plan ghi 60/20/20 nhưng code hiện dùng 70/20/10 (dataset/splits/). Hoặc (a) đổi paper ghi 70/20/10 theo code, hoặc (b) chia lại 60/20/20 rồi chạy lại. Cần quyết trước khi finalize §5.]` `[TODO: nêu xử lý spatial leakage — chia theo scene/vùng, không random từng chip.]`
+dB values clipped to [−50, 0] and normalized to [0, 1]; NaN → ignore-index. Chips are split into train/validation/test **stratified by region** with a fixed seed for reproducibility, using a **70/20/10 ratio → 312 / 88 / 45 chips** (agreed protocol). `[TODO: nêu xử lý spatial leakage — chia theo scene/vùng, không random từng chip.]`
 
 ### 4.3 Baselines
 Classical: **Otsu** thresholding (non-learned). CNN: **U-Net (vanilla)**, **U-Net (SMP/ResNet34, ImageNet-pretrained)**, **U-Net++**, **DeepLabV3**, **MobileNet-UNet** (depthwise-separable, 3 learning rates). Transformer: **SegFormer-b2 (MiT)**. Compressed ANN: **MobileNet-UNet INT8** (static PTQ, per-channel weights, ~200-image calibration). SNN: **SNN-Flood** (T ∈ {1,2,3,4,5,6,7,8,10}, LR sweep) and **ANN2SNN** conversion (T ∈ {32,64,128}). All models share one dataset, loss (weighted CE + Dice + Focal, ignore-index −1), metric, training, and evaluation protocol.
@@ -100,13 +100,15 @@ Under the **per-chip** metric the picture changes. Wilcoxon signed-rank on paire
 | **MobileNet-INT8 vs SNN-T6** | 0.258 | 0.246 | **0.397** | **n.s. (tied)** |
 | SNN-T2 vs SNN-T6 | 0.240 | 0.246 | 0.368 | n.s. |
 
-The best SNN configurations and MobileNet-INT8 form a **statistically indistinguishable cluster** on per-chip flood-IoU (p ≈ 0.40), even though pooled IoU separates them. **The headline conclusion about SNN competitiveness is therefore metric-dependent** — a central, honest finding of this benchmark. `[TODO P1: thêm cột effect size Cohen's d]`
+The best SNN configurations and MobileNet-INT8 form a **statistically indistinguishable cluster** on per-chip flood-IoU (p ≈ 0.40), even though pooled IoU separates them. **The headline conclusion about SNN competitiveness is therefore metric-dependent** — a central, honest finding of this benchmark.
+
+**Effect sizes** (paired Cohen's *d*) confirm this beyond p-values: U-Net-SMP vs INT8 *d* = 0.35 (small–medium, and significant), whereas **INT8 vs SNN-T6 *d* = 0.09** and SNN-T2 vs SNN-T6 *d* = −0.14 — both **negligible**. Bootstrap 95% CIs (`results/bootstrap_ci.csv`) overlap for INT8 and the top SNNs.
 
 ### 5.3 Energy & spike-rate analysis
-On the accuracy–energy Pareto front (Fig. `pareto.png`), the frontier is **Otsu (0 mJ, 0.13) → MobileNet-INT8 (3.1 mJ, 0.49) → SegFormer (98 mJ, 0.53)**; SNN-Flood is not Pareto-optimal under the pooled metric. Measured spike sparsity is **13.6% (T2) to 23.8% (T8)**, confirming that SNN energy is driven by genuine sparsity rather than an accounting artifact. Direct-trained SNNs (31–167 mJ) are far more efficient than ANN2SNN (94–440 mJ), because converted networks fire densely (spike-rate ≈10%) over many timesteps.
+On the accuracy–energy Pareto front (Fig. `figures/pareto_pooled.png`, `figures/pareto_perchip.png`), the frontier is **Otsu (0 mJ, 0.13) → MobileNet-INT8 (3.1 mJ, 0.49) → SegFormer (98 mJ, 0.53)**; SNN-Flood is not Pareto-optimal under the pooled metric. Measured spike sparsity is **13.6% (T2) to 23.8% (T8)**, confirming that SNN energy is driven by genuine sparsity rather than an accounting artifact. Direct-trained SNNs (31–167 mJ) are far more efficient than ANN2SNN (94–440 mJ), because converted networks fire densely (spike-rate ≈10%) over many timesteps.
 
 ### 5.4 Per-region breakdown
-All models share the same regional difficulty ordering — easiest in Mekong/Ghana (IoU ≈ 0.4–0.5), hardest in Bolivia (≈0.04 for every model) — indicating this is a property of the **data**, not the model. Relative to CNNs, SNNs are comparatively **stronger in Sri-Lanka and Ghana** and **weaker in Mekong and Pakistan** (see `per_region.csv`), suggesting SNN inductive biases suit certain backscatter regimes. `[TODO P1: heatmap 11 vùng × 8 model]`
+All models share the same regional difficulty ordering — easiest in Mekong/Ghana (IoU ≈ 0.4–0.5), hardest in Bolivia (≈0.04 for every model) — indicating this is a property of the **data**, not the model. Relative to CNNs, SNNs are comparatively **stronger in Sri-Lanka and Ghana** and **weaker in Mekong and Pakistan** (Fig. `figures/per_region_heatmap.png`; `results/per_region.csv`), suggesting SNN inductive biases suit certain backscatter regimes.
 
 ### 5.5 Ablations
 **Timesteps T.** Within the stable regime (T2–T8), accuracy is flat (T2 0.391 ≈ T8 0.388; SNN-T2 vs SNN-T6 n.s.), so **larger T buys no accuracy** but costs proportionally more energy. At **extreme T (T1, T10)** we observe occasional **seed-level training collapse** (a single seed dropping to ≈0.08, inflating variance to std ≈ 0.13–0.15); re-running **T6 with 5 seeds** reduced its std from 0.13 (n=3) to **0.022 (n=5)**, confirming the earlier instability was a small-sample artifact, not a bimodal property of T6. **Learning rate** affects SNN *stability* more than mean accuracy. **Quantization bits.** INT8 preserves accuracy (−0.008 IoU vs FP32) at 20× energy; INT4 via `torchao` was inconclusive in our environment (API/kernel did not cover Conv2d) `[TODO: nêu như một giới hạn công cụ, không phải kết luận khoa học]`.
@@ -138,5 +140,5 @@ We presented the first systematic energy–accuracy benchmark of direct-trained 
 
 ## Appendix / trạng thái checklist (theo plan thầy)
 **P0 (trước khi viết):** ✅ debug spike ANN2SNN (8–11%); ⏳ freeze code (`git tag paper-v1` — làm ở commit này); ✅ metric = pooled + per-chip (per-chip là chính); ✅ 8 model cho Table 1.
-**P1 (đang viết):** ☐ Pareto 2 bản (pooled/per-chip); ☐ per-region heatmap; ☐ T-sweep plot có error bar; ☐ qualitative 6 chip (SegFormer/INT8/SNN-T2); ☐ bootstrap 95% CI; ☐ Cohen's d.
+**P1 (đang viết):** ✅ Pareto 2 bản (pooled/per-chip); ✅ per-region heatmap; ✅ T-sweep plot có error bar; ☐ qualitative 6 chip (SegFormer/INT8/SNN-T2 — cần checkpoint+inference); ✅ bootstrap 95% CI; ✅ Cohen's d. *(sinh bằng `make_figures.py` → paper/figures/, paper/results/)*
 **P2 (cuối):** ☐ proofread; ☐ cite check; ☐ format venue; ☐ reproducibility (git SHA, seeds, hardware); ☐ code link công khai.

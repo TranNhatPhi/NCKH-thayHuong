@@ -1,0 +1,4 @@
+pair,n,mean_diff,cohens_d
+unet_smp vs mobilenet_int8,40,0.0331,0.353
+mobilenet_int8 vs spiking_unet_T6,40,0.0118,0.091
+spiking_unet_T2 vs spiking_unet_T6,40,-0.0062,-0.139
