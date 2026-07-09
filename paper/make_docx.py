@@ -37,6 +37,16 @@ def body(text, italic=False, justify=True):
     return p
 
 
+def set_col_widths(table, widths):
+    """Ép độ rộng từng cột (inch) để tên model không vỡ dòng."""
+    table.autofit = False
+    table.allow_autofit = False
+    for row in table.rows:
+        for i, w in enumerate(widths):
+            if i < len(row.cells):
+                row.cells[i].width = Inches(w)
+
+
 def figure(fname, caption, width=6.2):
     path = os.path.join(FIG, fname)
     if os.path.isfile(path):
@@ -169,10 +179,13 @@ for i, row in enumerate(rows):
     for j, val in enumerate(row):
         cell = tbl.cell(i, j); cell.text = val
         for p in cell.paragraphs:
+            p.paragraph_format.space_after = Pt(1); p.paragraph_format.space_before = Pt(1)
             for r in p.runs:
-                r.font.size = Pt(9)
+                r.font.size = Pt(8.5)
                 if i == 0:
                     r.bold = True
+# Model rộng để tên gọn 1 dòng; các cột số hẹp lại
+set_col_widths(tbl, [1.55, 0.95, 0.62, 0.72, 0.92, 0.62, 0.55, 0.55])
 cap = doc.add_paragraph()
 cr = cap.add_run("Table 1. Selected models (full 25-config table in Appendix A). Energy per 512×512 "
                  "chip. Cluster = statistical grouping by Wilcoxon signed-rank on per-chip flood-IoU: "
@@ -288,6 +301,7 @@ if os.path.isfile(csv_path):
             for p in c.paragraphs:
                 for r in p.runs:
                     r.font.size = Pt(8)
+    set_col_widths(at, [1.6, 1.45, 0.6, 0.5, 0.55, 0.6, 0.72, 0.53])
     cap = doc.add_paragraph()
     cr = cap.add_run(f"Table A1. All {len(rows)} configurations.")
     cr.italic = True; cr.font.size = Pt(9)
