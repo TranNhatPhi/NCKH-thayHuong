@@ -76,18 +76,20 @@ AdamW, gradient clipping (max-norm 5.0), early stopping on validation flood-IoU.
 ### 5.1 Main comparison (Table 1)
 **Table 1.** Selected models (full 25-row table in Appendix / `summary.csv`). Energy in mJ per 512×512 chip; Pooled = pooled flood-IoU (mean±std over seeds); Per-chip = mean per-chip flood-IoU.
 
-| Model | Group | Params | Energy (mJ) | Pooled IoU | Per-chip IoU | Spike% |
-|-------|-------|:-----:|:-----:|:-----:|:-----:|:-----:|
-| SegFormer-b2 | Transformer | 24.7 M | 98.0 | **0.525 ± 0.018** | 0.251 | — |
-| U-Net (SMP) | CNN | 24.4 M | 143.9 | 0.509 ± 0.028 | 0.291 | — |
-| U-Net++ | CNN | 26.1 M | 339.1 | 0.500 ± 0.026 | 0.264 | — |
-| MobileNet-UNet | CNN | 6.6 M | 62.7 | 0.498 ± 0.007 | 0.272 | — |
-| **MobileNet-UNet INT8** | Quantized | 6.6 M | **3.1** | 0.490 ± 0.003 | 0.258 | — |
-| U-Net (vanilla) | CNN | 7.8 M | 223.2 | 0.482 ± 0.019 | **0.306** | — |
-| **SNN-Flood T2** | SNN | 7.8 M | 31.4 | 0.391 ± 0.045 | 0.240 | 13.6 |
-| **SNN-Flood T8** | SNN | 7.8 M | 166.8 | 0.388 ± 0.030 | 0.246 | 23.8 |
-| ANN2SNN (T=128) | SNN | 24.4 M | 440.4 | 0.290 ± 0.062 | 0.196 | 10.6 |
-| DeepLabV3 | CNN | 26.0 M | 502.3 | 0.419 ± 0.014 | 0.127 | — |
+| Model | Group | Params | Energy (mJ) | Pooled IoU | Per-chip IoU | Spike% | Cluster |
+|-------|-------|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
+| SegFormer-b2 | Transformer | 24.7 M | 98.0 | **0.525 ± 0.018** | 0.251 | — | A |
+| U-Net (SMP) | CNN | 24.4 M | 143.9 | 0.509 ± 0.028 | 0.291 | — | A |
+| U-Net++ | CNN | 26.1 M | 339.1 | 0.500 ± 0.026 | 0.264 | — | A |
+| MobileNet-UNet | CNN | 6.6 M | 62.7 | 0.498 ± 0.007 | 0.272 | — | A |
+| **MobileNet-UNet INT8** | Quantized | 6.6 M | **3.1** | 0.490 ± 0.003 | 0.258 | — | B |
+| U-Net (vanilla) | CNN | 7.8 M | 223.2 | 0.482 ± 0.019 | **0.306** | — | A |
+| **SNN-Flood T2** | SNN | 7.8 M | 31.4 | 0.391 ± 0.045 | 0.240 | 13.6 | B |
+| **SNN-Flood T8** | SNN | 7.8 M | 166.8 | 0.388 ± 0.030 | 0.246 | 23.8 | B |
+| ANN2SNN (T=128) | SNN | 24.4 M | 440.4 | 0.290 ± 0.062 | 0.196 | 10.6 | C |
+| DeepLabV3 | CNN | 26.0 M | 502.3 | 0.419 ± 0.014 | 0.127 | — | weak |
+
+> Cluster = nhóm thống kê theo Wilcoxon per-chip: **A** = ANN mạnh; **B** = INT8 + SNN tốt nhất (không phân biệt được, p > 0.05); **C** = ANN2SNN; *weak* = per-chip IoU thấp.
 
 Two observations frame the paper: **(1)** on **pooled** IoU the learned accuracy leaders are pretrained ANNs (SegFormer 0.525, U-Net-SMP 0.509), and **MobileNet-UNet INT8 attains 0.490 at only 3.1 mJ**, i.e. it nearly matches its FP32 parent (0.498 @ 62.7 mJ) at 20× lower energy; **(2)** SNN-Flood tops out at ≈0.39 pooled IoU, clearly below the quantized CNN.
 
