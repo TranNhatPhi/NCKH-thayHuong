@@ -47,6 +47,45 @@ def set_col_widths(table, widths):
                 row.cells[i].width = Inches(w)
 
 
+def add_full_table(table_no):
+    """Bảng đầy đủ 25 configs đọc từ results/summary.csv, chèn tại chỗ gọi."""
+    csv_path = os.path.join(RES, "summary.csv")
+    if not os.path.isfile(csv_path):
+        body("[TODO: chạy make_figures.py/summarize.py để có results/summary.csv rồi tạo lại docx.]")
+        return
+    rows = list(csv.DictReader(open(csv_path)))
+    rows.sort(key=lambda r: -float(r["flood_IoU"]))
+    hdr = ["Model", "Pooled IoU (±std, n)", "Per-chip", "F1", "pwIoU", "Params", "Energy(mJ)", "Spike%"]
+    at = doc.add_table(rows=len(rows) + 1, cols=len(hdr))
+    at.style = "Light Grid Accent 1"
+    for j, x in enumerate(hdr):
+        c = at.cell(0, j); c.text = x
+        for p in c.paragraphs:
+            p.paragraph_format.space_after = Pt(1); p.paragraph_format.space_before = Pt(1)
+            for r in p.runs:
+                r.bold = True; r.font.size = Pt(8)
+    for i, row in enumerate(rows, start=1):
+        snn = row["is_snn"].strip().lower() in ("true", "1")
+        spk = f"{float(row['spike_rate'])*100:.1f}" if snn else "—"
+        vals = [row["model"],
+                f"{float(row['flood_IoU']):.3f}±{float(row['flood_IoU_std']):.3f} (n{row['n']})",
+                f"{float(row['flood_IoU_chip']):.3f}", f"{float(row['flood_F1']):.3f}",
+                f"{float(row['pw_IoU']):.3f}", f"{float(row['params_M']):.2f}",
+                f"{float(row['energy_mJ']):.1f}", spk]
+        for j, v in enumerate(vals):
+            c = at.cell(i, j); c.text = v
+            for p in c.paragraphs:
+                p.paragraph_format.space_after = Pt(1); p.paragraph_format.space_before = Pt(1)
+                for r in p.runs:
+                    r.font.size = Pt(8)
+    set_col_widths(at, [1.6, 1.45, 0.6, 0.5, 0.55, 0.6, 0.72, 0.53])
+    cap = doc.add_paragraph()
+    cr = cap.add_run(f"Table {table_no}. Full benchmark — all {len(rows)} configurations "
+                     "(mean over seeds; n in parentheses). F1 = flood Dice; pwIoU = permanent-water IoU. "
+                     "Sorted by pooled flood-IoU.")
+    cr.italic = True; cr.font.size = Pt(9); cap.paragraph_format.space_after = Pt(8)
+
+
 def figure(fname, caption, width=6.2):
     path = os.path.join(FIG, fname)
     if os.path.isfile(path):
@@ -194,7 +233,10 @@ cr = cap.add_run("Table 1. Selected models (full 25-config table in Appendix A).
 cr.italic = True; cr.font.size = Pt(9); cap.paragraph_format.space_after = Pt(8)
 body("On pooled IoU the accuracy leaders are pretrained ANNs (SegFormer 0.525); MobileNet-UNet INT8 "
      "reaches 0.490 at only 3.1 mJ (≈ its FP32 parent at 20× lower energy). SNN-Flood tops out at "
-     "≈0.39 pooled IoU, below the quantized CNN.")
+     "≈0.39 pooled IoU, below the quantized CNN. Table 2 reports all 25 configurations.")
+
+body("")
+add_full_table(2)
 
 h("5.2 Statistical significance", 11, 6)
 body("Under the per-chip metric: U-Net-SMP vs MobileNet-INT8 p = 0.015 (significant, Cohen's d = 0.35); "
@@ -264,52 +306,9 @@ for r in [
     for run in p.runs:
         run.font.size = Pt(9)
 
-# ---------- Appendix A: full benchmark table (25 configs từ summary.csv) ----------
+# ---------- Appendix A: Reproducibility (bảng đầy đủ đã lên §5.1 Table 2) ----------
 doc.add_page_break()
-h("Appendix A. Full benchmark (all configurations)")
-body("Complete results for all 25 configurations (mean over seeds; n in parentheses). "
-     "Pooled = pooled flood-IoU; Per-chip = mean per-chip flood-IoU; F1 = flood Dice; "
-     "pwIoU = permanent-water IoU. Sorted by pooled flood-IoU.", italic=True)
-
-csv_path = os.path.join(RES, "summary.csv")
-if os.path.isfile(csv_path):
-    rows = list(csv.DictReader(open(csv_path)))
-    rows.sort(key=lambda r: -float(r["flood_IoU"]))
-    hdr = ["Model", "Pooled IoU (±std, n)", "Per-chip", "F1", "pwIoU", "Params", "Energy(mJ)", "Spike%"]
-    at = doc.add_table(rows=len(rows) + 1, cols=len(hdr))
-    at.style = "Light Grid Accent 1"
-    for j, x in enumerate(hdr):
-        c = at.cell(0, j); c.text = x
-        for p in c.paragraphs:
-            for r in p.runs:
-                r.bold = True; r.font.size = Pt(8)
-    for i, row in enumerate(rows, start=1):
-        snn = row["is_snn"].strip().lower() in ("true", "1")
-        spk = f"{float(row['spike_rate'])*100:.1f}" if snn else "—"
-        vals = [
-            row["model"],
-            f"{float(row['flood_IoU']):.3f}±{float(row['flood_IoU_std']):.3f} (n{row['n']})",
-            f"{float(row['flood_IoU_chip']):.3f}",
-            f"{float(row['flood_F1']):.3f}",
-            f"{float(row['pw_IoU']):.3f}",
-            f"{float(row['params_M']):.2f}",
-            f"{float(row['energy_mJ']):.1f}",
-            spk,
-        ]
-        for j, v in enumerate(vals):
-            c = at.cell(i, j); c.text = v
-            for p in c.paragraphs:
-                for r in p.runs:
-                    r.font.size = Pt(8)
-    set_col_widths(at, [1.6, 1.45, 0.6, 0.5, 0.55, 0.6, 0.72, 0.53])
-    cap = doc.add_paragraph()
-    cr = cap.add_run(f"Table A1. All {len(rows)} configurations.")
-    cr.italic = True; cr.font.size = Pt(9)
-else:
-    body("[TODO: chạy make_figures.py/summarize.py để có results/summary.csv rồi tạo lại docx.]")
-
-# Reproducibility statement (P2)
-h("Appendix B. Reproducibility")
+h("Appendix A. Reproducibility")
 body("Code, configs, region-stratified splits and fixed seeds are released at [GitHub repo link]. "
      "Results correspond to git tag paper-v1. Hardware: 1× NVIDIA H100 (training); energy is estimated "
      "analytically at 45 nm (not measured on-chip). Seeds: {0,1,2} (T=6 also {3,4}). [TODO: điền git SHA + repo URL].", italic=True)
