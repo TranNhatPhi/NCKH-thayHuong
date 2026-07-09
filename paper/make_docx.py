@@ -3,6 +3,7 @@ Sinh file Word mẫu (SNN-Flood-Paper.docx) theo plan của thầy — format co
     python make_docx.py            (chạy từ thư mục paper/ hoặc repo root)
 Nhúng sẵn Table 1 (bảng Word) + 3 figure (pareto_pooled, tsweep, per_region_heatmap).
 """
+import csv
 import os
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
@@ -10,6 +11,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIG = os.path.join(HERE, "figures")
+RES = os.path.join(HERE, "results")
 OUT = os.path.join(HERE, "SNN-Flood-Paper.docx")
 
 doc = Document()
@@ -199,12 +201,17 @@ body("All models share the same regional difficulty ordering — easiest in Meko
 figure("per_region_heatmap.png", "Figure 3. Per-region flood-IoU (model × region).")
 
 h("5.5 Ablations", 11, 6)
-body("Within T2–T8 accuracy is flat (T2 0.391 ≈ T8 0.388; SNN-T2 vs SNN-T6 n.s.), so larger T buys "
-     "no accuracy but costs more energy. At extreme T (T1, T10) occasional seed-level training "
-     "collapse appears (a seed drops to ≈0.08); re-running T6 with 5 seeds reduced std from 0.13 (n=3) "
-     "to 0.022 (n=5), confirming a small-sample artifact, not a bimodal property. LR affects SNN "
-     "stability more than mean accuracy. INT8 preserves accuracy (−0.008 IoU) at 20× energy; INT4 was "
-     "inconclusive in our tooling (Conv2d unsupported).")
+body("Timesteps T. Within T2–T8 accuracy is flat (T2 0.391 ≈ T8 0.388; SNN-T2 vs SNN-T6 n.s.), so "
+     "larger T buys no accuracy but costs more energy. At extreme T (T1, T10) occasional seed-level "
+     "training collapse appears (a seed drops to ≈0.08); re-running T6 with 5 seeds reduced std from "
+     "0.13 (n=3) to 0.022 (n=5), confirming a small-sample artifact, not a bimodal property.")
+body("Learning rate. LR = 2e-4 improved the CNN (MobileNet-UNet 0.480 → 0.498) but degraded the SNN "
+     "(SNN-T2 0.391 → 0.370; SNN-T8 0.388 → 0.355): the winning CNN recipe does not transfer to SNNs, "
+     "and LR mainly affects SNN training stability rather than raising its accuracy ceiling. The "
+     "symmetric LR sweep also establishes a fair comparison (both families tuned).")
+body("Quantization bits. INT8 preserves accuracy (−0.008 IoU) at 20× lower energy; INT4 was "
+     "inconclusive in our tooling (torchao int4 did not cover Conv2d) — reported as a tooling "
+     "limitation, not a scientific conclusion.")
 figure("tsweep.png", "Figure 4. T-sweep: accuracy flat, energy grows; collapse at T1/T10.")
 
 # ---------- 6 Discussion ----------
@@ -240,6 +247,55 @@ for r in [
     p = doc.add_paragraph(r); p.paragraph_format.space_after = Pt(2)
     for run in p.runs:
         run.font.size = Pt(9)
+
+# ---------- Appendix A: full benchmark table (25 configs từ summary.csv) ----------
+doc.add_page_break()
+h("Appendix A. Full benchmark (all configurations)")
+body("Complete results for all 25 configurations (mean over seeds; n in parentheses). "
+     "Pooled = pooled flood-IoU; Per-chip = mean per-chip flood-IoU; F1 = flood Dice; "
+     "pwIoU = permanent-water IoU. Sorted by pooled flood-IoU.", italic=True)
+
+csv_path = os.path.join(RES, "summary.csv")
+if os.path.isfile(csv_path):
+    rows = list(csv.DictReader(open(csv_path)))
+    rows.sort(key=lambda r: -float(r["flood_IoU"]))
+    hdr = ["Model", "Pooled IoU (±std, n)", "Per-chip", "F1", "pwIoU", "Params", "Energy(mJ)", "Spike%"]
+    at = doc.add_table(rows=len(rows) + 1, cols=len(hdr))
+    at.style = "Light Grid Accent 1"
+    for j, x in enumerate(hdr):
+        c = at.cell(0, j); c.text = x
+        for p in c.paragraphs:
+            for r in p.runs:
+                r.bold = True; r.font.size = Pt(8)
+    for i, row in enumerate(rows, start=1):
+        snn = row["is_snn"].strip().lower() in ("true", "1")
+        spk = f"{float(row['spike_rate'])*100:.1f}" if snn else "—"
+        vals = [
+            row["model"],
+            f"{float(row['flood_IoU']):.3f}±{float(row['flood_IoU_std']):.3f} (n{row['n']})",
+            f"{float(row['flood_IoU_chip']):.3f}",
+            f"{float(row['flood_F1']):.3f}",
+            f"{float(row['pw_IoU']):.3f}",
+            f"{float(row['params_M']):.2f}",
+            f"{float(row['energy_mJ']):.1f}",
+            spk,
+        ]
+        for j, v in enumerate(vals):
+            c = at.cell(i, j); c.text = v
+            for p in c.paragraphs:
+                for r in p.runs:
+                    r.font.size = Pt(8)
+    cap = doc.add_paragraph()
+    cr = cap.add_run(f"Table A1. All {len(rows)} configurations.")
+    cr.italic = True; cr.font.size = Pt(9)
+else:
+    body("[TODO: chạy make_figures.py/summarize.py để có results/summary.csv rồi tạo lại docx.]")
+
+# Reproducibility statement (P2)
+h("Appendix B. Reproducibility")
+body("Code, configs, region-stratified splits and fixed seeds are released at [GitHub repo link]. "
+     "Results correspond to git tag paper-v1. Hardware: 1× NVIDIA H100 (training); energy is estimated "
+     "analytically at 45 nm (not measured on-chip). Seeds: {0,1,2} (T=6 also {3,4}). [TODO: điền git SHA + repo URL].", italic=True)
 
 doc.save(OUT)
 print(f"Đã tạo {OUT}")
