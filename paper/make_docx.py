@@ -199,44 +199,11 @@ body("4.4 Training. AdamW, gradient clipping (max-norm 5.0), early stopping on v
 # ---------- 5 Results ----------
 h("5. Results")
 h("5.1 Main comparison (Table 1)", 11, 6)
-rows = [
-    ("Model", "Group", "Params", "Energy(mJ)", "Pooled IoU", "Per-chip", "Spike%", "Cluster"),
-    ("SegFormer-b2", "Transformer", "24.7M", "98.0", "0.525±0.018", "0.251", "—", "A"),
-    ("U-Net (SMP)", "CNN", "24.4M", "143.9", "0.509±0.028", "0.291", "—", "A"),
-    ("U-Net++", "CNN", "26.1M", "339.1", "0.500±0.026", "0.264", "—", "A"),
-    ("MobileNet-UNet", "CNN", "6.6M", "62.7", "0.498±0.007", "0.272", "—", "A"),
-    ("MobileNet-UNet INT8", "Quantized", "6.6M", "3.1", "0.490±0.003", "0.258", "—", "B"),
-    ("U-Net (vanilla)", "CNN", "7.8M", "223.2", "0.482±0.019", "0.306", "—", "A"),
-    ("SNN-Flood T2", "SNN", "7.8M", "31.4", "0.391±0.045", "0.240", "13.6", "B"),
-    ("SNN-Flood T8", "SNN", "7.8M", "166.8", "0.388±0.030", "0.246", "23.8", "B"),
-    ("ANN2SNN (T=128)", "SNN", "24.4M", "440.4", "0.290±0.062", "0.196", "10.6", "C"),
-    ("DeepLabV3", "CNN", "26.0M", "502.3", "0.419±0.014", "0.127", "—", "weak"),
-]
-tbl = doc.add_table(rows=len(rows), cols=len(rows[0]))
-tbl.style = "Light Grid Accent 1"
-for i, row in enumerate(rows):
-    for j, val in enumerate(row):
-        cell = tbl.cell(i, j); cell.text = val
-        for p in cell.paragraphs:
-            p.paragraph_format.space_after = Pt(1); p.paragraph_format.space_before = Pt(1)
-            for r in p.runs:
-                r.font.size = Pt(8.5)
-                if i == 0:
-                    r.bold = True
-# Model rộng để tên gọn 1 dòng; các cột số hẹp lại
-set_col_widths(tbl, [1.55, 0.95, 0.62, 0.72, 0.92, 0.62, 0.55, 0.55])
-cap = doc.add_paragraph()
-cr = cap.add_run("Table 1. Selected models (full 25-config table in Appendix A). Energy per 512×512 "
-                 "chip. Cluster = statistical grouping by Wilcoxon signed-rank on per-chip flood-IoU: "
-                 "A = top ANNs; B = INT8 CNN and best SNNs (mutually indistinguishable, p > 0.05); "
-                 "C = ANN2SNN; weak = low per-chip IoU.")
-cr.italic = True; cr.font.size = Pt(9); cap.paragraph_format.space_after = Pt(8)
+add_full_table(1)
 body("On pooled IoU the accuracy leaders are pretrained ANNs (SegFormer 0.525); MobileNet-UNet INT8 "
      "reaches 0.490 at only 3.1 mJ (≈ its FP32 parent at 20× lower energy). SNN-Flood tops out at "
-     "≈0.39 pooled IoU, below the quantized CNN. Table 2 reports all 25 configurations.")
-
-body("")
-add_full_table(2)
+     "≈0.39 pooled IoU, below the quantized CNN. The statistical grouping (Cluster A/B/C) is analysed "
+     "in §5.2: the INT8 CNN and the best SNNs form one indistinguishable cluster on per-chip flood-IoU.")
 
 h("5.2 Statistical significance", 11, 6)
 body("Under the per-chip metric: U-Net-SMP vs MobileNet-INT8 p = 0.015 (significant, Cohen's d = 0.35); "

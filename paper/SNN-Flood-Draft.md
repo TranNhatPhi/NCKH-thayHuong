@@ -74,7 +74,7 @@ AdamW, gradient clipping (max-norm 5.0), early stopping on validation flood-IoU.
 ## 5. Results
 
 ### 5.1 Main comparison (Table 1)
-**Table 1.** Selected models (full 25-row table = Table 2 below / `summary.csv`). Energy in mJ per 512×512 chip; Pooled = pooled flood-IoU (mean±std over seeds); Per-chip = mean per-chip flood-IoU.
+**Table 1.** Full benchmark — all 25 configurations (in the .docx; markdown shows the 10 highlighted rows below, full list in `summary.csv`). Energy in mJ per 512×512 chip; Pooled = pooled flood-IoU (mean±std over seeds); Per-chip = mean per-chip flood-IoU.
 
 | Model | Group | Params | Energy (mJ) | Pooled IoU | Per-chip IoU | Spike% | Cluster |
 |-------|-------|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
@@ -115,7 +115,7 @@ All models share the same regional difficulty ordering — easiest in Mekong/Gha
 ### 5.5 Ablations
 **Timesteps T.** Within the stable regime (T2–T8), accuracy is flat (T2 0.391 ≈ T8 0.388; SNN-T2 vs SNN-T6 n.s.), so **larger T buys no accuracy** but costs proportionally more energy. At **extreme T (T1, T10)** we observe occasional **seed-level training collapse** (a single seed dropping to ≈0.08, inflating variance to std ≈ 0.13–0.15); re-running **T6 with 5 seeds** reduced its std from 0.13 (n=3) to **0.022 (n=5)**, confirming the earlier instability was a small-sample artifact, not a bimodal property of T6. **Learning rate:** LR = 2e-4 *improved* the CNN (MobileNet-UNet 0.480 → 0.498) but *degraded* the SNN (SNN-T2 0.391 → 0.370; SNN-T8 0.388 → 0.355) — the winning CNN recipe does **not** transfer to SNNs, and LR mainly affects SNN *stability* rather than its accuracy ceiling; the symmetric LR sweep also establishes a fair comparison. **Quantization bits:** INT8 preserves accuracy (−0.008 IoU vs FP32) at 20× energy; INT4 via `torchao` was inconclusive in our environment (kernel did not cover Conv2d) — a tooling limitation, not a scientific conclusion.
 
-Full per-configuration numbers (all 25 configs, incl. F1/pwIoU) are in **Table 2 (§5.1) / `results/summary.csv`**.
+Full per-configuration numbers (all 25 configs, incl. F1/pwIoU) are in **Table 1 (§5.1) / `results/summary.csv`**.
 
 ---
 
