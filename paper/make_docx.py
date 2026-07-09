@@ -104,10 +104,10 @@ tr.bold = True; tr.font.size = Pt(16)
 t.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
 a = doc.add_paragraph()
-ar = a.add_run("Tran Nhat Phi¹, Huong Bui² (advisor)"); ar.font.size = Pt(12)
+ar = a.add_run("Tran Nhat Phi¹, Hoang Dinh², Huong Bui³ (advisor)"); ar.font.size = Pt(12)
 a.alignment = WD_ALIGN_PARAGRAPH.CENTER
 aff = doc.add_paragraph()
-afr = aff.add_run("¹ ² [Affiliation / University] — {emails}   [TODO điền cơ quan, email]")
+afr = aff.add_run("¹ ² ³ [Affiliation / University] — {emails}   [TODO điền cơ quan, email]")
 afr.font.size = Pt(10); afr.italic = True
 aff.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
