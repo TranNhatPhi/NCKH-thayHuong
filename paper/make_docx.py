@@ -111,6 +111,13 @@ afr = aff.add_run("¹ [Affiliation 1] — [email]    ² [Affiliation 2] — [ema
 afr.font.size = Pt(10); afr.italic = True
 aff.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
+# ---------- Banner trạng thái (xoá khi số liệu 60/20/20 đã cập nhật) ----------
+bn = doc.add_paragraph()
+bnr = bn.add_run("⚠️ DRAFT NOTE: numbers below are v1 (70/20/10 split). The split is now 60/20/20 "
+                 "(agreed 09/07); models are being retrained and Table 1 / figures will be refreshed "
+                 "from the new run. Remove this note after updating.")
+bnr.italic = True; bnr.font.size = Pt(9); bnr.font.color.rgb = RGBColor(0xB0, 0x00, 0x00)
+
 # ---------- Abstract ----------
 h("Abstract", 12)
 body("Rapid flood-extent mapping from Sentinel-1 SAR is critical for disaster response, and "
@@ -189,7 +196,9 @@ h("4. Experimental Setup")
 body("4.1 Dataset. Sen1Floods11 hand-labeled subset: 446 chips of 512×512, 2 channels (VV/VH dB), "
      "across 11 flood events/regions. 3-class labels via JRC permanent-water.")
 body("4.2 Preprocessing & splits. dB clipped to [−50,0], normalized to [0,1]; NaN → ignore-index. "
-     "Region-stratified split 70/20/10 → 312/88/45 chips (agreed protocol), fixed seed.")
+     "One NaN-only chip is dropped (445 valid). Region-stratified split 60/20/20 → 271/87/87 chips "
+     "(agreed protocol; larger test set than the earlier 70/20/10 for more reliable evaluation), with "
+     "spatially-overlapping chips kept in the same split to avoid leakage, fixed seed 42.")
 body("4.3 Baselines. Otsu; U-Net (vanilla / SMP-ResNet34 pretrained / U-Net++); DeepLabV3; "
      "MobileNet-UNet (3 LRs) and MobileNet-UNet INT8 (static PTQ); SegFormer-b2; SNN-Flood "
      "(T∈{1..8,10}, LR sweep); ANN2SNN (T∈{32,64,128}). Shared dataset/loss/metric/protocol.")
@@ -286,8 +295,10 @@ for r in [
 doc.add_page_break()
 h("Appendix A. Reproducibility")
 body("Code, configs, region-stratified splits and fixed seeds are released at [GitHub repo link]. "
-     "Results correspond to git tag paper-v1. Hardware: 1× NVIDIA H100 (training); energy is estimated "
-     "analytically at 45 nm (not measured on-chip). Seeds: {0,1,2} (T=6 also {3,4}). [TODO: điền git SHA + repo URL].", italic=True)
+     "We keep all experiment versions: v1 = 70/20/10 split (git tag paper-v1, archived in "
+     "paper/results_v1_70-20-10/); v2 = 60/20/20 split (current). Hardware: 1× NVIDIA H100 (training); "
+     "energy is estimated analytically at 45 nm (not measured on-chip). Seeds: {0,1,2} (T=6 also {3,4}). "
+     "[TODO: điền git SHA + repo URL].", italic=True)
 
 doc.save(OUT)
 print(f"Đã tạo {OUT}")

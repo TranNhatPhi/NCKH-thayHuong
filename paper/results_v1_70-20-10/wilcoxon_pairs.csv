@@ -1,0 +1,4 @@
+pair,A_mean,B_mean,p_value,significant
+unet_smp vs mobilenet_int8,0.2909,0.2578,0.0146,1
+mobilenet_int8 vs spiking_unet_T6,0.2578,0.246,0.3974,0
+spiking_unet_T2 vs spiking_unet_T6,0.2398,0.246,0.3682,0
