@@ -117,6 +117,9 @@ All models share the same regional difficulty ordering — easiest in Mekong/Gha
 
 Full per-configuration numbers (all 25 configs, incl. F1/pwIoU) are in **Table 1 (§5.1) / `results/summary.csv`**.
 
+### 5.6 Qualitative results
+Fig. `figures/qual_comparison.png` compares predictions on four permanent-water-rich chips (columns: SAR | GT | SegFormer | MobileNet | SNN-T2). SegFormer and MobileNet delineate permanent-water channels (blue) cleanly; **SNN-T2 produces salt-and-pepper predictions and merges water into the flood class**, matching its low pwIoU. All models struggle on the hardest scenes (Bolivia). Per-model figures: `figures/qual_{segformer_b2,mobilenet,snn_T2}.png`.
+
 ---
 
 ## 6. Discussion
@@ -144,5 +147,5 @@ We presented the first systematic energy–accuracy benchmark of direct-trained 
 
 ## Appendix / trạng thái checklist (theo plan thầy)
 **P0 (trước khi viết):** ✅ debug spike ANN2SNN (8–11%); ⏳ freeze code (`git tag paper-v1` — làm ở commit này); ✅ metric = pooled + per-chip (per-chip là chính); ✅ 8 model cho Table 1.
-**P1 (đang viết):** ✅ Pareto 2 bản (pooled/per-chip); ✅ per-region heatmap; ✅ T-sweep plot có error bar; ☐ qualitative 6 chip (SegFormer/INT8/SNN-T2 — cần checkpoint+inference); ✅ bootstrap 95% CI; ✅ Cohen's d. *(sinh bằng `make_figures.py` → paper/figures/, paper/results/)*
+**P1 (đang viết):** ✅ Pareto 2 bản (pooled/per-chip); ✅ per-region heatmap; ✅ T-sweep plot có error bar; ✅ qualitative comparison (SegFormer/MobileNet/SNN-T2, `make_qualitative.py`); ✅ bootstrap 95% CI; ✅ Cohen's d. *(sinh bằng `make_figures.py` + `make_qualitative.py` → paper/figures/)*
 **P2 (cuối):** ☐ proofread; ☐ cite check; ☐ format venue; ☐ reproducibility (git SHA, seeds, hardware); ☐ code link công khai.

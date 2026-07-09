@@ -239,6 +239,15 @@ body("Quantization bits. INT8 preserves accuracy (−0.008 IoU) at 20× lower en
      "limitation, not a scientific conclusion.")
 figure("tsweep.png", "Figure 4. T-sweep: accuracy flat, energy grows; collapse at T1/T10.")
 
+h("5.6 Qualitative results", 11, 6)
+body("Figure 5 compares predictions on four permanent-water-rich chips. SegFormer and MobileNet "
+     "delineate the permanent-water channels (blue) cleanly, whereas SNN-T2 produces salt-and-pepper "
+     "predictions and largely merges water into the flood class — consistent with its low permanent-water "
+     "IoU (Table 1). All models still struggle on the hardest scenes (e.g., Bolivia).")
+figure("qual_comparison.png",
+       "Figure 5. Qualitative comparison on test chips (columns: SAR VV | Ground truth | SegFormer | "
+       "MobileNet | SNN-T2). MobileNet-INT8 is visually identical to MobileNet FP32 (−0.008 IoU).")
+
 # ---------- 6 Discussion ----------
 h("6. Discussion")
 body("6.1 Why SNN does not dominate. Under a MAC/SynOps energy model, the SNN's sparse-spike "
