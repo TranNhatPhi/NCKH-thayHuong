@@ -176,6 +176,18 @@ def stats(avg):
     print(f"→ paper/results/effect_size_pairs.csv")
 
 
+def sync_results():
+    """Copy summary.csv + analysis CSV (do summarize.py/analysis.py ghi vào runs/) sang paper/results/
+    để make_docx.py đọc đúng bản mới nhất."""
+    import shutil
+    dst = os.path.join(OUT, "..", "results")
+    os.makedirs(dst, exist_ok=True)
+    for src in ["runs/summary.csv"] + glob.glob("runs/analysis/*.csv"):
+        if os.path.isfile(src):
+            shutil.copy(src, dst)
+            print(f"   sync {src} → paper/results/")
+
+
 if __name__ == "__main__":
     summary = load_summary()
     avg, region = load_perchip()
@@ -186,4 +198,5 @@ if __name__ == "__main__":
     tsweep(summary)
     heatmap(avg, region)
     stats(avg)
-    print("\nXONG. Figures ở paper/figures/, CSV ở paper/results/.")
+    sync_results()
+    print("\nXONG. Figures ở paper/figures/, CSV ở paper/results/. (Nhớ chạy summarize.py + analysis.py trước.)")

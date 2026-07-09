@@ -111,13 +111,6 @@ afr = aff.add_run("¹ [Affiliation 1] — [email]    ² [Affiliation 2] — [ema
 afr.font.size = Pt(10); afr.italic = True
 aff.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-# ---------- Banner trạng thái (xoá khi số liệu 60/20/20 đã cập nhật) ----------
-bn = doc.add_paragraph()
-bnr = bn.add_run("⚠️ DRAFT NOTE: numbers below are v1 (70/20/10 split). The split is now 60/20/20 "
-                 "(agreed 09/07); models are being retrained and Table 1 / figures will be refreshed "
-                 "from the new run. Remove this note after updating.")
-bnr.italic = True; bnr.font.size = Pt(9); bnr.font.color.rgb = RGBColor(0xB0, 0x00, 0x00)
-
 # ---------- Abstract ----------
 h("Abstract", 12)
 body("Rapid flood-extent mapping from Sentinel-1 SAR is critical for disaster response, and "
@@ -128,11 +121,11 @@ body("Rapid flood-extent mapping from Sentinel-1 SAR is critical for disaster re
      "ANN-to-SNN conversion, and an INT8-quantized CNN — for 3-class flood-on-land segmentation "
      "(background / permanent water / flood) on Sen1Floods11, where permanent water is separated "
      "from flood using the JRC Global Surface Water layer. Across 20+ configurations trained with "
-     "multiple seeds, we find that (i) with pooled flood-IoU an INT8 MobileNet-UNet dominates the "
-     "accuracy–energy Pareto front (0.490 IoU at 3.1 mJ), while (ii) with a per-chip paired metric "
-     "the best direct-trained SNN is statistically indistinguishable from the INT8 CNN (Wilcoxon, "
-     "p = 0.40; Cohen's d = 0.09) — the conclusion about SNN competitiveness is metric-dependent. "
-     "We verify 13.6–23.8% spike sparsity supporting the energy estimate, show ANN-to-SNN conversion "
+     "multiple seeds, we find that an INT8 MobileNet-UNet dominates the accuracy–energy Pareto front "
+     "(0.464 IoU at 3.1 mJ, versus its FP32 parent's 0.465 at 62.7 mJ) and significantly outperforms the "
+     "best direct-trained SNN on both pooled IoU (≈0.47 vs ≈0.35) and a per-chip paired metric, though "
+     "the per-chip gap is small (Wilcoxon p = 0.04, Cohen's d = 0.24). "
+     "We verify 13–27% spike sparsity supporting the energy estimate, show ANN-to-SNN conversion "
      "fails even at T = 128, analyse per-region geographic sensitivity, and give practical guidance "
      "for choosing SNN vs. quantized CNN.")
 kw = doc.add_paragraph()
@@ -153,10 +146,11 @@ h("1.2 Contributions", 11, 6)
 for c in [
     "First direct-trained SNN benchmark for 3-class flood-on-land segmentation on Sen1Floods11, "
     "with 20+ configurations and a full ablation over timesteps T, learning rate and encoding.",
-    "Rigorous statistical comparison via Wilcoxon signed-rank on paired per-chip flood-IoU: a "
-    "direct-trained SNN is statistically indistinguishable from an INT8 MobileNet-UNet (p > 0.05), "
-    "whereas pooled IoU lets the quantized CNN dominate — metric choice determines the conclusion.",
-    "Verified energy claim: measured spike sparsity 13.6–23.8% confirms the SynOps estimate; and "
+    "Rigorous statistical comparison via Wilcoxon signed-rank on paired per-chip flood-IoU with "
+    "bootstrap CIs and effect sizes: the INT8 CNN significantly outperforms the best SNN on both "
+    "pooled and per-chip IoU, but the per-chip gap is small (Cohen's d ≈ 0.24) — quantifying exactly "
+    "how far SNNs trail on this task.",
+    "Verified energy claim: measured spike sparsity 13–27% confirms the SynOps estimate; and "
     "ANN-to-SNN conversion fails to converge even at T = 128, so direct training is essential.",
     "Per-region analysis revealing geographic sensitivity (SNN relatively strong in Sri-Lanka/Ghana, "
     "weak in Mekong/Pakistan).",
@@ -209,44 +203,46 @@ body("4.4 Training. AdamW, gradient clipping (max-norm 5.0), early stopping on v
 h("5. Results")
 h("5.1 Main comparison (Table 1)", 11, 6)
 add_full_table(1)
-body("On pooled IoU the accuracy leaders are pretrained ANNs (SegFormer 0.525); MobileNet-UNet INT8 "
-     "reaches 0.490 at only 3.1 mJ (≈ its FP32 parent at 20× lower energy). SNN-Flood tops out at "
-     "≈0.39 pooled IoU, below the quantized CNN. The statistical grouping (Cluster A/B/C) is analysed "
-     "in §5.2: the INT8 CNN and the best SNNs form one indistinguishable cluster on per-chip flood-IoU.")
+body("On pooled IoU the accuracy leaders are pretrained ANNs (U-Net++ 0.489, SegFormer 0.488); "
+     "MobileNet-UNet INT8 reaches 0.464 at only 3.1 mJ (≈ its FP32 parent, 0.465, at 20× lower energy). "
+     "SNN-Flood tops out at ≈0.35 pooled IoU, clearly below the quantized CNN. Per-chip significance is "
+     "analysed in §5.2.")
 
 h("5.2 Statistical significance", 11, 6)
-body("Under the per-chip metric: U-Net-SMP vs MobileNet-INT8 p = 0.015 (significant, Cohen's d = 0.35); "
-     "MobileNet-INT8 vs SNN-T6 p = 0.397 (n.s., d = 0.09); SNN-T2 vs SNN-T6 p = 0.368 (n.s., d = −0.14). "
-     "The best SNNs and INT8 form a statistically indistinguishable cluster — the headline conclusion is "
-     "metric-dependent.")
+body("Under the per-chip metric: U-Net-SMP vs MobileNet-INT8 p = 0.0006 (significant, Cohen's d = 0.30); "
+     "MobileNet-INT8 vs SNN-T6 p = 0.043 (significant but small, d = 0.24); SNN-T2 vs SNN-T6 p = 0.056 (n.s.). "
+     "Thus the INT8 CNN significantly outperforms the best SNN even per-chip, but with a small effect size — "
+     "SNNs trail yet stay close on a per-scene basis, while the pooled-IoU gap is large. (An earlier "
+     "70/20/10 split with only 45 test chips lacked the power to detect this gap; the 60/20/20 split with "
+     "87 test chips does — motivating the larger test set.)")
 
 h("5.3 Energy & spike-rate analysis", 11, 6)
-body("The pooled Pareto frontier is Otsu (0 mJ, 0.13) → MobileNet-INT8 (3.1 mJ, 0.49) → SegFormer "
-     "(98 mJ, 0.53); SNN-Flood is not Pareto-optimal under pooled IoU. Measured spike sparsity "
-     "13.6% (T2)–23.8% (T8) confirms energy is driven by genuine sparsity. Direct-trained SNNs "
-     "(31–167 mJ) are far more efficient than ANN2SNN (94–440 mJ).")
+body("The pooled Pareto frontier is Otsu (0 mJ, 0.13) → MobileNet-INT8 (3.1 mJ, 0.464) → SegFormer / "
+     "U-Net++ (98–339 mJ, ≈0.49); SNN-Flood is not Pareto-optimal under pooled IoU. Measured spike "
+     "sparsity 13–27% confirms energy is driven by genuine sparsity. Direct-trained SNNs "
+     "(19–188 mJ) are far more efficient than ANN2SNN (95–441 mJ).")
 figure("pareto_pooled.png", "Figure 1. Accuracy–energy Pareto (pooled flood-IoU).")
 figure("pareto_perchip.png", "Figure 2. Accuracy–energy Pareto (per-chip flood-IoU).")
 
 h("5.4 Per-region breakdown", 11, 6)
-body("All models share the same regional difficulty ordering — easiest in Mekong/Ghana (≈0.4–0.5), "
-     "hardest in Bolivia (≈0.04 for every model) — a property of the data, not the model. SNNs are "
-     "comparatively stronger in Sri-Lanka/Ghana and weaker in Mekong/Pakistan.")
+body("Regional difficulty varies widely across the 11 flood events (Fig. 3), and all models share a "
+     "similar ordering — indicating difficulty is largely a property of the data, not the model. SNNs "
+     "track the same regional pattern as the CNNs, with no region where they uniquely fail.")
 figure("per_region_heatmap.png", "Figure 3. Per-region flood-IoU (model × region).")
 
 h("5.5 Ablations", 11, 6)
-body("Timesteps T. Within T2–T8 accuracy is flat (T2 0.391 ≈ T8 0.388; SNN-T2 vs SNN-T6 n.s.), so "
-     "larger T buys no accuracy but costs more energy. At extreme T (T1, T10) occasional seed-level "
-     "training collapse appears (a seed drops to ≈0.08); re-running T6 with 5 seeds reduced std from "
-     "0.13 (n=3) to 0.022 (n=5), confirming a small-sample artifact, not a bimodal property.")
-body("Learning rate. LR = 2e-4 improved the CNN (MobileNet-UNet 0.480 → 0.498) but degraded the SNN "
-     "(SNN-T2 0.391 → 0.370; SNN-T8 0.388 → 0.355): the winning CNN recipe does not transfer to SNNs, "
-     "and LR mainly affects SNN training stability rather than raising its accuracy ceiling. The "
-     "symmetric LR sweep also establishes a fair comparison (both families tuned).")
-body("Quantization bits. INT8 preserves accuracy (−0.008 IoU) at 20× lower energy; INT4 was "
+body("Timesteps T. Accuracy is essentially flat across T2–T10 (all ≈0.32–0.35; SNN-T2 vs SNN-T6 n.s.), "
+     "so larger T buys no accuracy while energy grows proportionally. Training is unstable across seeds: "
+     "several configurations show one seed collapsing to ≈0.10 (std up to 0.10–0.15), and which T is "
+     "affected varies between runs — pointing to stochastic seed-level collapse rather than a fixed "
+     "bimodal dependence on T.")
+body("Learning rate. LR = 2e-4 was best for the CNN (MobileNet-UNet 0.462 → 0.465) but degraded the SNN "
+     "(SNN-T2 0.340 → 0.316; SNN-T8 0.342 → 0.332): the winning CNN recipe does not transfer to SNNs. "
+     "The symmetric LR sweep also establishes a fair comparison (both families tuned).")
+body("Quantization bits. INT8 preserves accuracy (−0.001 IoU vs FP32) at 20× lower energy; INT4 was "
      "inconclusive in our tooling (torchao int4 did not cover Conv2d) — reported as a tooling "
      "limitation, not a scientific conclusion.")
-figure("tsweep.png", "Figure 4. T-sweep: accuracy flat, energy grows; collapse at T1/T10.")
+figure("tsweep.png", "Figure 4. T-sweep: accuracy flat across T; energy grows; sporadic seed collapse inflates variance.")
 
 h("5.6 Qualitative results", 11, 6)
 body("Figure 5 compares predictions on four permanent-water-rich chips. SegFormer and MobileNet "
@@ -264,9 +260,11 @@ body("6.1 Why SNN does not dominate. Under a MAC/SynOps energy model, the SNN's 
      "depthwise-separable convs, and (ii) INT8 making each MAC ~20× cheaper. The SNN's event-driven "
      "benefit is only partially captured on von-Neumann hardware.")
 body("6.2 When to use SNN vs quantized CNN. On standard edge hardware with INT8 kernels, a quantized "
-     "MobileNet-UNet is best. Prefer an SNN when the target is neuromorphic hardware (e.g., Loihi), "
-     "when INT8 MAC arrays are unavailable, or with native event-based sensing; under the per-chip "
-     "metric the SNN is not statistically worse than INT8. [TODO: vẽ decision-tree figure]")
+     "MobileNet-UNet is the clear choice (highest accuracy per mJ, best on both metrics). An SNN becomes "
+     "attractive only when the target is neuromorphic hardware (e.g., Loihi) where event-driven execution "
+     "realises its full energy benefit, when INT8 MAC arrays are unavailable, or with native event-based "
+     "sensing; the per-chip gap to INT8 is small (d = 0.24), so the accuracy cost of that choice is modest. "
+     "[TODO: vẽ decision-tree figure]")
 body("6.3 Limitations. No deployment on real neuromorphic hardware (energy estimated, not on-chip); "
      "single dataset; modest absolute IoU (harder 3-class SAR-only); INT4 not conclusively evaluated.")
 
@@ -274,9 +272,10 @@ body("6.3 Limitations. No deployment on real neuromorphic hardware (energy estim
 h("7. Conclusion")
 body("We presented the first systematic energy–accuracy benchmark of direct-trained SNNs for SAR "
      "flood segmentation against CNN, Transformer, ANN2SNN and INT8 baselines under one protocol with "
-     "multi-seed statistics. SNNs are competitive with an INT8 CNN under a paired per-chip metric but "
-     "not under pooled IoU; ANN2SNN fails; quantized CNNs occupy the pooled Pareto front. Future work: "
-     "neuromorphic deployment, multi-temporal SAR, event-native sensing.")
+     "multi-seed statistics. A quantized INT8 CNN significantly outperforms the best SNN on both pooled "
+     "and per-chip IoU, though the per-chip gap is small (d = 0.24); ANN2SNN fails; quantized CNNs occupy "
+     "the pooled Pareto front. SNNs remain a viable low-energy baseline whose advantage awaits neuromorphic "
+     "hardware. Future work: neuromorphic deployment, multi-temporal SAR, event-native sensing.")
 
 # ---------- References ----------
 h("References")
