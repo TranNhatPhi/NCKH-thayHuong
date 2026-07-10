@@ -401,11 +401,11 @@ for r in [
 # ---------- Appendix A: Reproducibility (bảng đầy đủ đã lên §5.1 Table 2) ----------
 doc.add_page_break()
 h("Appendix A. Reproducibility")
-body("Code, configs, region-stratified splits and fixed seeds are released at [GitHub repo link]. "
-     "We keep all experiment versions: v1 = 70/20/10 split (git tag paper-v1, archived in "
-     "paper/results_v1_70-20-10/); v2 = 60/20/20 split (current). Hardware: 1× NVIDIA H100 (training); "
-     "energy is estimated analytically at 45 nm (not measured on-chip). Seeds: {0,1,2} (T=6 also {3,4}). "
-     "[TODO: điền git SHA + repo URL].", italic=True)
+body("Code, configs, region-stratified splits and fixed seeds are released at "
+     "https://github.com/TranNhatPhi/NCKH-thayHuong (commit f984b59). We keep all experiment versions: "
+     "v1 = 70/20/10 split (git tag paper-v1, archived in paper/results_v1_70-20-10/); v2 = 60/20/20 split "
+     "(current). Hardware: 1× NVIDIA H100 (training); energy is estimated analytically at 45 nm "
+     "(not measured on-chip). Seeds: {0,1,2} (T=6 also {3,4}).", italic=True)
 
 doc.save(OUT)
 print(f"Đã tạo {OUT}")
