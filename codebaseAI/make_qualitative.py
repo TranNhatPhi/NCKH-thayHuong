@@ -20,12 +20,12 @@ from src.models import get_model
 
 CMAP = ListedColormap(["#454545", "#1f77b4", "#d62728"])
 OUT = "../paper/figures/qual_comparison.png"
-N = 4  # số chip
+N = 5  # số vùng (chip từ 5 vùng khác nhau)
 
-MODELS = [  # (nhãn cột, config, run_dir)
-    ("SegFormer", "configs/segformer_b2.yaml", "segformer_b2_s0"),
+MODELS = [  # (nhãn cột, config, run_dir) — theo yêu cầu thầy: UNet++ / MobileNet(-INT8) / Spiking-UNet
+    ("U-Net++", "configs/unetpp.yaml", "unetpp_s0"),
     ("MobileNet", "configs/mobilenet_unet_lr2e4.yaml", "mobilenet_unet_lr2e4_s0"),
-    ("SNN-T2", "configs/spiking_unet_T2.yaml", "spiking_unet_T2_s0"),
+    ("Spiking-UNet", "configs/spiking_unet_T2.yaml", "spiking_unet_T2_s0"),
 ]
 
 
@@ -45,14 +45,16 @@ def rgb(mask):
 def main():
     dev = get_device()
     ds = Sen1FloodsDataset("../dataset", "test")
-    # chọn chip nhiều nước thường trực (class 1) + flood → lộ khác biệt detect nước xanh
-    scored = []
+    # Chọn 1 chip đại diện cho mỗi vùng (nhiều nước thường trực + flood nhất), lấy N vùng
+    best_per_region = {}
     for i in range(len(ds)):
-        _, lab, _ = ds[i]
-        pw = (lab == 1).sum().item(); fl = (lab == 2).sum().item()
-        scored.append((pw + 0.3 * fl, i))
-    scored.sort(reverse=True)
-    picks = [i for _, i in scored[:N]]
+        _, lab, cid = ds[i]
+        region = cid.split("_")[0]
+        score = (lab == 1).sum().item() + 0.3 * (lab == 2).sum().item()
+        if region not in best_per_region or score > best_per_region[region][0]:
+            best_per_region[region] = (score, i)
+    top_regions = sorted(best_per_region.values(), reverse=True)[:N]
+    picks = [i for _, i in top_regions]
 
     models = [(name,) + load(cfg, run) for name, cfg, run in MODELS]
     ncol = 2 + len(models)
@@ -80,7 +82,7 @@ def main():
     fig.legend(handles=handles, loc="lower center", ncol=3, fontsize=9)
     fig.tight_layout(rect=[0, 0.03, 1, 1])
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    fig.savefig(OUT, dpi=150)
+    fig.savefig(OUT, dpi=300)
     print(f"Đã lưu {OUT}")
 
 

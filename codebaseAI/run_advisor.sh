@@ -40,12 +40,9 @@ for s in $SEEDS; do
   run python quantize_int8.py --seed $s
 done
 
-echo "===== 5) MobileNet-UNet INT4 (thử — fail cũng là finding) ====="
-for s in $SEEDS; do
-  run python quantize_int4.py --seed $s
-done
+# (INT4 đã bỏ theo ý thầy 10/07: tooling không hỗ trợ Conv2d → giảm giá trị benchmark)
 
-echo "===== 6) Tổng hợp + phân tích ====="
+echo "===== 5) Tổng hợp + phân tích ====="
 run python summarize.py
 run python analysis.py --ref spiking_unet_T4
 

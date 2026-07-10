@@ -167,17 +167,26 @@ body("2.1 SAR flood mapping. Sen1Floods11 [1] established a Sentinel-1 benchmark
 body("2.2 Spiking neural networks for vision. Direct training via surrogate gradients and spiking "
      "segmenters have shown feasibility on frame/event benchmarks [TODO cite]; SNNs for SAR are "
      "nascent, and none benchmark flood segmentation.")
-body("2.3 Quantization for edge deployment. PTQ/QAT compress CNNs to INT8/INT4 with small accuracy "
+body("2.3 Quantization for edge deployment. PTQ/QAT compress CNNs to INT8 with small accuracy "
      "loss, drastically cutting per-operation energy; INT8 is the strongest ANN energy competitor to "
      "SNNs and is a mandatory baseline here.")
 
 # ---------- 3 Method ----------
 h("3. Method")
+figure("fig1_pipeline.png",
+       "Figure 1. Pipeline overview: Sentinel-1 SAR → preprocessing (dB clip, normalization, JRC "
+       "3-class labels) → segmentation model (Spiking U-Net / CNN / Transformer, shared protocol) → "
+       "3-class flood map (background / permanent water / flood).")
 body("3.1 Problem formulation. Per-pixel 3-class segmentation of 2-channel (VV, VH, dB) chips into "
      "background (0), permanent water (1) and flood (2); invalid pixels use ignore-index (−1).")
 body("3.2 Spiking U-Net. A 4-level U-Net (7.76 M params) with a LIF neuron (ATan surrogate, τ=2.0, "
      "detach-reset) after each conv block, multi-step mode (SpikingJelly); direct SAR encoding over "
-     "T timesteps; final membrane potentials averaged to logits; tdBN-style BatchNorm over (T,B).")
+     "T timesteps; final membrane potentials averaged to logits; tdBN-style BatchNorm over (T,B). "
+     "The architecture is detailed in Figure 2.")
+figure("fig2_architecture.png",
+       "Figure 2. Spiking U-Net architecture (4-level encoder–decoder). Each block is Conv → tdBN "
+       "(over T,B) → LIF (ATan surrogate, τ=2, detach-reset); red dashed lines are skip connections; "
+       "the input is repeated over T timesteps and final membrane potentials are averaged to logits.")
 body("3.3 Energy modeling. At 45 nm [Horowitz 2014]: FP32 MAC = 4.6 pJ, INT8 MAC ≈ 0.23 pJ, "
      "SNN AC = 0.9 pJ. ANN energy = FLOPs × E_MAC (ptflops); SNN energy = SynOps × E_AC where "
      "SynOps = Σ_conv(MACs × input spike-rate) accumulated over T.")
@@ -221,14 +230,15 @@ body("The pooled Pareto frontier is Otsu (0 mJ, 0.13) → MobileNet-INT8 (3.1 mJ
      "U-Net++ (98–339 mJ, ≈0.49); SNN-Flood is not Pareto-optimal under pooled IoU. Measured spike "
      "sparsity 13–27% confirms energy is driven by genuine sparsity. Direct-trained SNNs "
      "(19–188 mJ) are far more efficient than ANN2SNN (95–441 mJ).")
-figure("pareto_pooled.png", "Figure 1. Accuracy–energy Pareto (pooled flood-IoU).")
-figure("pareto_perchip.png", "Figure 2. Accuracy–energy Pareto (per-chip flood-IoU).")
+figure("pareto_pooled.png",
+       "Figure 3. Accuracy–energy Pareto front (pooled flood-IoU vs energy, log scale). MobileNet-INT8 "
+       "sits at the low-energy corner; the per-chip variant is in paper/figures/pareto_perchip.png.")
 
 h("5.4 Per-region breakdown", 11, 6)
 body("Regional difficulty varies widely across the 11 flood events (Fig. 3), and all models share a "
      "similar ordering — indicating difficulty is largely a property of the data, not the model. SNNs "
      "track the same regional pattern as the CNNs, with no region where they uniquely fail.")
-figure("per_region_heatmap.png", "Figure 3. Per-region flood-IoU (model × region).")
+figure("per_region_heatmap.png", "Figure 6. Per-region flood-IoU heatmap (model × region).")
 
 h("5.5 Ablations", 11, 6)
 body("Timesteps T. Accuracy is essentially flat across T2–T10 (all ≈0.32–0.35; SNN-T2 vs SNN-T6 n.s.), "
@@ -239,19 +249,20 @@ body("Timesteps T. Accuracy is essentially flat across T2–T10 (all ≈0.32–0
 body("Learning rate. LR = 2e-4 was best for the CNN (MobileNet-UNet 0.462 → 0.465) but degraded the SNN "
      "(SNN-T2 0.340 → 0.316; SNN-T8 0.342 → 0.332): the winning CNN recipe does not transfer to SNNs. "
      "The symmetric LR sweep also establishes a fair comparison (both families tuned).")
-body("Quantization bits. INT8 preserves accuracy (−0.001 IoU vs FP32) at 20× lower energy; INT4 was "
-     "inconclusive in our tooling (torchao int4 did not cover Conv2d) — reported as a tooling "
-     "limitation, not a scientific conclusion.")
-figure("tsweep.png", "Figure 4. T-sweep: accuracy flat across T; energy grows; sporadic seed collapse inflates variance.")
+body("Quantization. INT8 static post-training quantization preserves accuracy (−0.001 IoU vs FP32) at "
+     "≈20× lower per-operation energy, making it the strongest energy-efficient baseline in this study.")
+figure("ablation_T.png",
+       "Figure 7. Ablation over timesteps T: (a) pooled Flood-IoU (mean±std) is flat across T; "
+       "(b) mean spike rate; (c) energy grows with T. Increasing T beyond 2 gives no accuracy gain.")
 
 h("5.6 Qualitative results", 11, 6)
-body("Figure 5 compares predictions on four permanent-water-rich chips. SegFormer and MobileNet "
-     "delineate the permanent-water channels (blue) cleanly, whereas SNN-T2 produces salt-and-pepper "
-     "predictions and largely merges water into the flood class — consistent with its low permanent-water "
-     "IoU (Table 1). All models still struggle on the hardest scenes (e.g., Bolivia).")
+body("Figure 5 compares predictions across five geographic regions. U-Net++ and MobileNet delineate the "
+     "permanent-water channels (blue) cleanly, whereas Spiking-UNet produces salt-and-pepper predictions "
+     "and largely merges water into the flood class — consistent with its low permanent-water IoU "
+     "(Table 1). All models still struggle on the hardest scenes.")
 figure("qual_comparison.png",
-       "Figure 5. Qualitative comparison on test chips (columns: SAR VV | Ground truth | SegFormer | "
-       "MobileNet | SNN-T2). MobileNet-INT8 is visually identical to MobileNet FP32 (−0.008 IoU).")
+       "Figure 5. Qualitative comparison across regions (columns: SAR VV | Ground truth | U-Net++ | "
+       "MobileNet | Spiking-UNet). MobileNet-INT8 is visually identical to MobileNet FP32 (−0.001 IoU).")
 
 # ---------- 6 Discussion ----------
 h("6. Discussion")
@@ -264,9 +275,12 @@ body("6.2 When to use SNN vs quantized CNN. On standard edge hardware with INT8 
      "attractive only when the target is neuromorphic hardware (e.g., Loihi) where event-driven execution "
      "realises its full energy benefit, when INT8 MAC arrays are unavailable, or with native event-based "
      "sensing; the per-chip gap to INT8 is small (d = 0.24), so the accuracy cost of that choice is modest. "
-     "[TODO: vẽ decision-tree figure]")
+     "Figure 4 summarises this as a decision guide.")
+figure("fig4_decision_tree.png",
+       "Figure 4. Decision guide for choosing between a Spiking U-Net and an INT8 MobileNet-UNet given "
+       "the deployment target, energy budget, and available INT8 support.")
 body("6.3 Limitations. No deployment on real neuromorphic hardware (energy estimated, not on-chip); "
-     "single dataset; modest absolute IoU (harder 3-class SAR-only); INT4 not conclusively evaluated.")
+     "single dataset; modest absolute IoU (harder 3-class SAR-only setting).")
 
 # ---------- 7 Conclusion ----------
 h("7. Conclusion")
@@ -280,12 +294,44 @@ body("We presented the first systematic energy–accuracy benchmark of direct-tr
 # ---------- References ----------
 h("References")
 for r in [
-    "[1] Bonafilia et al., Sen1Floods11: a georeferenced dataset for Sentinel-1 flood mapping, CVPRW 2020.",
-    "[2] Horowitz, Computing's energy problem (and what we can do about it), ISSCC 2014.",
-    "[3] Pekel et al., High-resolution mapping of global surface water (JRC), Nature 2016.",
-    "[TODO] SpikingJelly; SNN segmentation (Shi 2022, Su 2023); MobileNetV2; SegFormer; DeepLabV3; "
-    "SAR-SNN works. Cần đủ 20–30 trích dẫn.",
+    "§ Dataset & SAR flood mapping",
+    "[1] Bonafilia, D., Tellman, B., Anderson, T., & Issenberg, E. (2020). Sen1Floods11: A georeferenced dataset to train and test deep learning flood algorithms for Sentinel-1. CVPRW, 210-211.",
+    "[2] Pekel, J. F., Cottam, A., Gorelick, N., & Belward, A. S. (2016). High-resolution mapping of global surface water and its long-term changes. Nature, 540(7633), 418-422.",
+    "[3] Torres, R., Snoeij, P., Geudtner, D., et al. (2012). GMES Sentinel-1 mission. Remote Sensing of Environment, 120, 9-24.",
+    "[TODO] 3–5 bài SAR flood mapping bằng deep learning gần đây (2022–2025).",
+    "§ Spiking neural networks & neuromorphic computing",
+    "[4] Fang, W., Chen, Y., Ding, J., et al. (2023). SpikingJelly: An open-source machine learning infrastructure platform for spike-based intelligence. Science Advances, 9(40), eadi1480.",
+    "[5] Wu, Y., Deng, L., Li, G., Zhu, J., Xie, Y., & Shi, L. (2019). Direct training for spiking neural networks: Faster, larger, better. AAAI, 33(01), 1311-1318.",
+    "[6] Neftci, E. O., Mostafa, H., & Zenke, F. (2019). Surrogate gradient learning in spiking neural networks. IEEE Signal Processing Magazine, 36(6), 51-63.",
+    "[7] Kim, Y., Chough, J., & Panda, P. (2022). Beyond classification: Directly training spiking neural networks for semantic segmentation. Neuromorphic Computing and Engineering, 2(4), 044015.",
+    "[8] Davies, M., Srinivasa, N., Lin, T. H., et al. (2018). Loihi: A neuromorphic manycore processor with on-chip learning. IEEE Micro, 38(1), 82-99.",
+    "[9] Roy, K., Jaiswal, A., & Panda, P. (2019). Towards spike-based machine intelligence with neuromorphic computing. Nature, 575(7784), 607-617.",
+    "[10] Zheng, H., Wu, Y., Deng, L., Hu, Y., & Li, G. (2021). Going deeper with directly-trained larger spiking neural networks. AAAI, 35(12), 11062-11070.",
+    "[TODO] 3–5 bài SNN gần đây.",
+    "§ CNN / Transformer baselines",
+    "[11] Ronneberger, O., Fischer, P., & Brox, T. (2015). U-Net: Convolutional networks for biomedical image segmentation. MICCAI, 234-241.",
+    "[12] Zhou, Z., Rahman Siddiquee, M. M., Tajbakhsh, N., & Liang, J. (2018). UNet++: A nested U-Net architecture for medical image segmentation. DLMIA, 3-11.",
+    "[13] Sandler, M., Howard, A., Zhu, M., Zhmoginov, A., & Chen, L. C. (2018). MobileNetV2: Inverted residuals and linear bottlenecks. CVPR, 4510-4520.",
+    "[14] Chen, L. C., Zhu, Y., Papandreou, G., Schroff, F., & Adam, H. (2018). Encoder-decoder with atrous separable convolution for semantic image segmentation (DeepLabV3+). ECCV, 801-818.",
+    "[15] Xie, E., Wang, W., Yu, Z., Anandkumar, A., Alvarez, J. M., & Luo, P. (2021). SegFormer: Simple and efficient design for semantic segmentation with transformers. NeurIPS, 34, 12077-12090.",
+    "[TODO] 3–5 bài kiến trúc gần đây.",
+    "§ Quantization",
+    "[16] Jacob, B., Kligys, S., Chen, B., et al. (2018). Quantization and training of neural networks for efficient integer-arithmetic-only inference. CVPR, 2704-2713.",
+    "[17] Krishnamoorthi, R. (2018). Quantizing deep convolutional networks for efficient inference: A whitepaper. arXiv:1806.08342.",
+    "[18] Nagel, M., Fournarakis, M., Amjad, R. A., et al. (2021). A white paper on neural network quantization. arXiv:2106.08295.",
+    "[TODO] 1–3 bài quantization gần đây.",
+    "§ Energy modeling",
+    "[19] Horowitz, M. (2014). 1.1 Computing's energy problem (and what we can do about it). ISSCC, 10-14.",
+    "[TODO] 1–3 bài energy modeling gần đây.",
+    "§ ANN-to-SNN conversion",
+    "[20] Rueckauer, B., Lungu, I. A., Hu, Y., Pfeiffer, M., & Liu, S. C. (2017). Conversion of continuous-valued deep networks to efficient event-driven networks for image classification. Frontiers in Neuroscience, 11, 682.",
+    "[21] Deng, S., & Gu, S. (2021). Optimal conversion of conventional artificial neural networks to spiking neural networks. ICLR.",
+    "[TODO] 1–3 bài ANN2SNN gần đây.",
 ]:
+    if r.startswith("§"):
+        p = doc.add_paragraph(); run = p.add_run(r[1:].strip()); run.bold = True; run.italic = True
+        run.font.size = Pt(9.5); p.paragraph_format.space_before = Pt(5); p.paragraph_format.space_after = Pt(2)
+        continue
     p = doc.add_paragraph(r); p.paragraph_format.space_after = Pt(2)
     for run in p.runs:
         run.font.size = Pt(9)

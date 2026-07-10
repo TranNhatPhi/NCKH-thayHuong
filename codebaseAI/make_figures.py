@@ -51,6 +51,7 @@ def load_summary():
             pooled_std=float(np.std(fi)),
             perchip_mean=float(np.mean([r.get("flood_IoU_perchip_mean", 0.0) for r in rs])),
             energy=rs[0].get("energy_mJ_SNN", rs[0].get("energy_mJ_ANN", 0.0)),
+            spike=float(np.mean([r.get("spike_rate", 0.0) for r in rs])),
             is_snn="SynOps_G" in rs[0],
             params=rs[0].get("params_M", 0.0),
         )
@@ -88,7 +89,7 @@ def pareto(summary, key, fname, ylabel):
     ax.set_ylabel(ylabel)
     ax.set_title(f"Accuracy–Energy Pareto ({key})")
     ax.grid(True, which="both", ls="--", alpha=0.4)
-    fig.tight_layout(); fig.savefig(f"{OUT}/{fname}", dpi=150); plt.close(fig)
+    fig.tight_layout(); fig.savefig(f"{OUT}/{fname}", dpi=300); plt.close(fig)
     print(f"→ {OUT}/{fname}")
 
 
@@ -108,9 +109,33 @@ def tsweep(summary):
     ax2 = ax1.twinx()
     ax2.plot(xs, en, "s--", color="steelblue", label="Energy")
     ax2.set_ylabel("Energy (mJ)", color="steelblue"); ax2.tick_params(axis="y", labelcolor="steelblue")
-    ax1.set_title("SNN-Flood: T-sweep (accuracy flat, energy grows; collapse at T1/T10)")
-    fig.tight_layout(); fig.savefig(f"{OUT}/tsweep.png", dpi=150); plt.close(fig)
+    ax1.set_title("SNN-Flood: T-sweep (accuracy flat across T; energy grows)")
+    fig.tight_layout(); fig.savefig(f"{OUT}/tsweep.png", dpi=300); plt.close(fig)
     print(f"→ {OUT}/tsweep.png")
+
+
+# ---------- 2b. Ablation 3-panel: IoU / Spike% / Energy vs T (Fig 7) ----------
+def ablation(summary):
+    Ts = [1, 2, 3, 4, 5, 6, 7, 8, 10]
+    xs, iou, err, spk, en = [], [], [], [], []
+    for T in Ts:
+        k = f"spiking_unet_T{T}"
+        if k in summary:
+            xs.append(T); iou.append(summary[k]["pooled_mean"]); err.append(summary[k]["pooled_std"])
+            spk.append(summary[k]["spike"] * 100); en.append(summary[k]["energy"])
+    fig, ax = plt.subplots(1, 3, figsize=(13, 4))
+    ax[0].errorbar(xs, iou, yerr=err, fmt="o-", color="#4477AA", capsize=4)
+    ax[0].set_xlabel("Timesteps T"); ax[0].set_ylabel("Pooled Flood-IoU (mean±std)")
+    ax[0].set_title("(a) Accuracy vs T"); ax[0].grid(True, ls="--", alpha=0.4)
+    ax[1].plot(xs, spk, "s-", color="#EE6677")
+    ax[1].set_xlabel("Timesteps T"); ax[1].set_ylabel("Mean spike rate (%)")
+    ax[1].set_title("(b) Spike rate vs T"); ax[1].grid(True, ls="--", alpha=0.4)
+    ax[2].plot(xs, en, "^-", color="#228833")
+    ax[2].set_xlabel("Timesteps T"); ax[2].set_ylabel("Energy (mJ)")
+    ax[2].set_title("(c) Energy vs T"); ax[2].grid(True, ls="--", alpha=0.4)
+    fig.suptitle("Ablation over timesteps T (Spiking U-Net)", fontsize=12)
+    fig.tight_layout(); fig.savefig(f"{OUT}/ablation_T.png", dpi=300); plt.close(fig)
+    print(f"→ {OUT}/ablation_T.png")
 
 
 # ---------- 3. Per-region heatmap ----------
@@ -137,7 +162,7 @@ def heatmap(avg, region):
                         color="white" if M[i, j] < 0.3 else "black", fontsize=7)
     fig.colorbar(im, ax=ax, label="per-region flood-IoU")
     ax.set_title("Per-region flood-IoU (model × region)")
-    fig.tight_layout(); fig.savefig(f"{OUT}/per_region_heatmap.png", dpi=150); plt.close(fig)
+    fig.tight_layout(); fig.savefig(f"{OUT}/per_region_heatmap.png", dpi=300); plt.close(fig)
     print(f"→ {OUT}/per_region_heatmap.png")
 
 
@@ -196,6 +221,7 @@ if __name__ == "__main__":
     pareto(summary, "pooled_mean", "pareto_pooled.png", "Pooled Flood-IoU ↑")
     pareto(summary, "perchip_mean", "pareto_perchip.png", "Per-chip Flood-IoU ↑")
     tsweep(summary)
+    ablation(summary)
     heatmap(avg, region)
     stats(avg)
     sync_results()
