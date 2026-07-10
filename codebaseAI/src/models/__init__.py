@@ -14,7 +14,7 @@ Bảng model:
 """
 
 LEARNABLE = ["unet", "unet_smp", "mobilenet_unet", "unetpp", "deeplabv3",
-             "segformer", "spiking_unet", "ann2snn"]
+             "segformer", "spiking_unet", "spiking_mobilenet", "ann2snn"]
 CLASSICAL = ["otsu"]
 
 
@@ -41,6 +41,9 @@ def get_model(name, in_channels=2, num_classes=3, **kwargs):
     if name == "spiking_unet":
         from .spiking_unet import SpikingUNet
         return SpikingUNet(in_channels, num_classes, **kwargs)
+    if name == "spiking_mobilenet":
+        from .spiking_mobilenet import SpikingMobileUNet
+        return SpikingMobileUNet(in_channels, num_classes, **kwargs)
     if name == "ann2snn":
         from .ann2snn import build_ann2snn
         return build_ann2snn(in_channels, num_classes, **kwargs)

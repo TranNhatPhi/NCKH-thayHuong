@@ -156,6 +156,9 @@ for c in [
     "weak in Mekong/Pakistan).",
     "Practical guidance: a decision procedure for SNN vs. quantized CNN given energy budget, accuracy "
     "floor and hardware target.",
+    "Hardware-fair SNN: we introduce Spiking-MobileNet — a depthwise-separable Spiking U-Net (1.52 M "
+    "params) — so the SNN uses the same efficient convolutions as MobileNet, isolating the effect of "
+    "spiking computation from that of the backbone in the energy comparison.",
 ]:
     doc.add_paragraph(c, style="List Number")
 
@@ -204,9 +207,13 @@ body("4.2 Preprocessing & splits. dB clipped to [−50,0], normalized to [0,1]; 
      "spatially-overlapping chips kept in the same split to avoid leakage, fixed seed 42.")
 body("4.3 Baselines. Otsu; U-Net (vanilla / SMP-ResNet34 pretrained / U-Net++); DeepLabV3; "
      "MobileNet-UNet (3 LRs) and MobileNet-UNet INT8 (static PTQ); SegFormer-b2; SNN-Flood "
-     "(T∈{1..8,10}, LR sweep); ANN2SNN (T∈{32,64,128}). Shared dataset/loss/metric/protocol.")
-body("4.4 Training. AdamW, gradient clipping (max-norm 5.0), early stopping on val flood-IoU; "
-     "3 seeds per config (T=6 with 5 seeds); Otsu deterministic. [TODO: epochs, batch size, lr từ base.yaml].")
+     "(T∈{1..8,10}, LR sweep); Spiking-MobileNet (T∈{2,4}); ANN2SNN (T∈{32,64,128}). "
+     "Shared dataset/loss/metric/protocol.")
+body("4.4 Training. Optimizer AdamW (lr = 1e-4, weight-decay = 1e-4; LR sweep also uses 5e-5 and 2e-4), "
+     "batch size 32 (8 for SNNs due to the ×T memory factor), up to 100 epochs with early stopping "
+     "(patience 15) on validation flood-IoU, gradient clipping (max-norm 5.0), 256×256 random crops for "
+     "training (full 512×512 for val/test). Loss = weighted CE (class weights [1, 5, 2], ignore-index −1) "
+     "+ Dice + Focal (γ = 2). Each learned config uses 3 seeds (T=6 uses 5); Otsu is deterministic.")
 
 # ---------- 5 Results ----------
 h("5. Results")
@@ -251,6 +258,11 @@ body("Learning rate. LR = 2e-4 was best for the CNN (MobileNet-UNet 0.462 → 0.
      "The symmetric LR sweep also establishes a fair comparison (both families tuned).")
 body("Quantization. INT8 static post-training quantization preserves accuracy (−0.001 IoU vs FP32) at "
      "≈20× lower per-operation energy, making it the strongest energy-efficient baseline in this study.")
+body("Spiking-MobileNet (hardware-fair SNN). [PENDING — results from the next training run] Because the "
+     "vanilla Spiking U-Net uses full convolutions while MobileNet uses depthwise-separable ones, we add "
+     "a depthwise-separable Spiking-MobileNet (1.52 M params) and will report it in Table 1 and the "
+     "Pareto plot, testing whether — on equal, efficient convolutions — the SNN narrows the energy–accuracy "
+     "gap to INT8 MobileNet.", italic=True)
 figure("ablation_T.png",
        "Figure 7. Ablation over timesteps T: (a) pooled Flood-IoU (mean±std) is flat across T; "
        "(b) mean spike rate; (c) energy grows with T. Increasing T beyond 2 gives no accuracy gain.")

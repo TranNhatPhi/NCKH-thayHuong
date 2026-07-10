@@ -1,0 +1,5 @@
+_base_: base.yaml
+name: spiking_mobilenet_T2   # Spiking-MobileNet (depthwise-separable + LIF) — so fair với INT8 MobileNet
+model: spiking_mobilenet
+batch_size: 8
+model_kwargs: {base: 32, T: 2, encoding: direct}

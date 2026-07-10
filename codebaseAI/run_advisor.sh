@@ -40,6 +40,14 @@ for s in $SEEDS; do
   run python quantize_int8.py --seed $s
 done
 
+echo "===== 4b) Spiking-MobileNet (depthwise-separable + LIF) — so fair với INT8 (x3 seed) ====="
+for cfg in spiking_mobilenet_T2 spiking_mobilenet_T4; do
+  for s in $SEEDS; do
+    run python train.py    --config configs/$cfg.yaml --seed $s
+    run python evaluate.py --config configs/$cfg.yaml --seed $s
+  done
+done
+
 # (INT4 đã bỏ theo ý thầy 10/07: tooling không hỗ trợ Conv2d → giảm giá trị benchmark)
 
 echo "===== 5) Tổng hợp + phân tích ====="
