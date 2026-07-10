@@ -136,12 +136,25 @@ kw.add_run("Spiking Neural Networks; SAR flood mapping; Sen1Floods11; energy-eff
 # ---------- 1 Introduction ----------
 h("1. Introduction")
 h("1.1 Motivation", 11, 6)
-body("Floods are among the most frequent and damaging natural disasters, and timely flood-extent "
-     "maps are essential for emergency response. Sentinel-1 SAR penetrates clouds and operates day "
-     "and night, unlike optical imagery. Deep segmentation models achieve strong accuracy but are "
-     "energetically expensive, limiting deployment on satellites, UAVs and edge stations. This "
-     "motivates studying the energy–accuracy trade-off of candidate architectures, and whether SNNs "
-     "— computing with sparse binary spikes and additions only — offer a favourable operating point.")
+body("Floods are among the most frequent and costly natural disasters worldwide, and rapid, accurate "
+     "flood-extent maps are essential for emergency response, damage assessment and relief planning. "
+     "Optical satellite imagery is frequently obscured by the very cloud cover that accompanies flood "
+     "events, whereas Synthetic Aperture Radar (SAR) — in particular the Sentinel-1 mission [3] — "
+     "penetrates clouds and operates day and night, making it the sensor of choice for operational flood "
+     "mapping. The Sen1Floods11 benchmark [1] has enabled a wave of deep-learning flood-segmentation "
+     "methods on Sentinel-1 data.")
+body("However, state-of-the-art segmentation networks (deep CNNs and Transformers) are computationally "
+     "and energetically expensive. For time-critical, in-the-field, or on-board (satellite/UAV) "
+     "deployment, inference energy becomes a first-class constraint, motivating a careful study of the "
+     "energy–accuracy trade-off across model families. Spiking Neural Networks (SNNs) are a promising "
+     "candidate: they encode information in sparse binary spikes and replace expensive multiply-"
+     "accumulate operations with cheap accumulate-only operations gated by spikes, and map naturally "
+     "onto event-driven neuromorphic hardware such as Loihi [8, 9]. Recent advances in surrogate-"
+     "gradient direct training [5, 6] and open frameworks [4] have made deep SNNs practical, and SNNs "
+     "have begun to be applied to dense prediction tasks such as semantic segmentation [7]. Yet, to our "
+     "knowledge, SNNs have never been systematically benchmarked for flood segmentation on SAR, and "
+     "prior SNN energy claims are rarely compared against the strongest efficient-ANN competitor, "
+     "INT8 quantization. This paper fills that gap with an honest, statistically rigorous benchmark.")
 h("1.2 Contributions", 11, 6)
 for c in [
     "First direct-trained SNN benchmark for 3-class flood-on-land segmentation on Sen1Floods11, "
@@ -164,15 +177,26 @@ for c in [
 
 # ---------- 2 Related Work ----------
 h("2. Related Work")
-body("2.1 SAR flood mapping. Sen1Floods11 [1] established a Sentinel-1 benchmark; later CNN and "
-     "semi-supervised methods improved water IoU. Prior work targets binary water; we address a "
-     "harder 3-class task separating permanent water via JRC [TODO cite].")
-body("2.2 Spiking neural networks for vision. Direct training via surrogate gradients and spiking "
-     "segmenters have shown feasibility on frame/event benchmarks [TODO cite]; SNNs for SAR are "
-     "nascent, and none benchmark flood segmentation.")
-body("2.3 Quantization for edge deployment. PTQ/QAT compress CNNs to INT8 with small accuracy "
-     "loss, drastically cutting per-operation energy; INT8 is the strongest ANN energy competitor to "
-     "SNNs and is a mandatory baseline here.")
+body("2.1 SAR flood mapping. The Sen1Floods11 dataset [1] provides georeferenced Sentinel-1 chips with "
+     "hand-labelled water masks across eleven global flood events and has become a standard benchmark; "
+     "the Sentinel-1 mission itself is described in [3]. Subsequent work has applied encoder–decoder CNNs "
+     "(e.g., U-Net variants [11, 12]) and semi-supervised learning to improve water IoU. Most methods "
+     "target binary water/non-water segmentation. We instead address a harder three-class task "
+     "(background / permanent water / flood), separating permanent water from flood using the JRC Global "
+     "Surface Water layer [2], which is more informative for operational flood response.")
+body("2.2 Spiking neural networks for vision. SNNs communicate via sparse binary spikes and are "
+     "attractive for energy-efficient, event-driven inference [9]. Two training paradigms dominate: "
+     "ANN-to-SNN conversion [20, 21], and direct training with surrogate gradients [5, 6], the latter "
+     "enabled at scale by tools such as SpikingJelly [4] and by techniques for training deeper SNNs "
+     "[10]. Beyond image classification, Kim et al. [7] showed SNNs can be trained directly for semantic "
+     "segmentation. SNN application to remote sensing and SAR is still nascent, and — to our knowledge — "
+     "no prior work benchmarks SNNs for flood segmentation on SAR.")
+body("2.3 Quantization for edge deployment. Post-training and quantization-aware methods compress CNNs "
+     "to INT8 with little accuracy loss while cutting per-operation energy by roughly an order of "
+     "magnitude [16, 17, 18]. INT8 is therefore the strongest efficient-ANN competitor to SNNs on "
+     "conventional hardware, yet it is seldom included in SNN energy comparisons; we treat it as a "
+     "mandatory baseline. Efficient CNN backbones such as MobileNetV2 [13] further reduce compute via "
+     "depthwise-separable convolutions, which we also adopt for a hardware-fair spiking counterpart.")
 
 # ---------- 3 Method ----------
 h("3. Method")
@@ -180,27 +204,49 @@ figure("fig1_pipeline.png",
        "Figure 1. Pipeline overview: Sentinel-1 SAR → preprocessing (dB clip, normalization, JRC "
        "3-class labels) → segmentation model (Spiking U-Net / CNN / Transformer, shared protocol) → "
        "3-class flood map (background / permanent water / flood).")
-body("3.1 Problem formulation. Per-pixel 3-class segmentation of 2-channel (VV, VH, dB) chips into "
-     "background (0), permanent water (1) and flood (2); invalid pixels use ignore-index (−1).")
-body("3.2 Spiking U-Net. A 4-level U-Net (7.76 M params) with a LIF neuron (ATan surrogate, τ=2.0, "
-     "detach-reset) after each conv block, multi-step mode (SpikingJelly); direct SAR encoding over "
-     "T timesteps; final membrane potentials averaged to logits; tdBN-style BatchNorm over (T,B). "
-     "The architecture is detailed in Figure 2.")
+body("3.1 Problem formulation. We treat flood mapping as three-class semantic segmentation. Given a "
+     "two-channel Sentinel-1 chip x ∈ R^{2×H×W} (VV and VH backscatter in dB), a model predicts, for "
+     "every pixel, one of three labels: background (0), permanent water (1) or flood (2). Ground-truth "
+     "water comes from the Sen1Floods11 hand labels [1]; permanent water is separated from flood using "
+     "the JRC Global Surface Water layer [2] (a pixel labelled water is assigned class 1 where JRC marks "
+     "permanent water, else class 2). Invalid/NaN pixels are assigned an ignore-index (−1) and excluded "
+     "from both the loss and the metrics. All models are optimised and evaluated under one shared "
+     "protocol so that differences reflect the architecture, not the training recipe.")
+body("3.2 Spiking U-Net. Our core SNN, SNN-Flood, is a four-level U-Net [11] (7.76 M parameters) in "
+     "which every convolutional block is Conv → BatchNorm → Leaky Integrate-and-Fire (LIF) neuron. LIF "
+     "neurons use the ATan surrogate gradient [6] (τ = 2.0, detach-reset) and run in multi-step mode via "
+     "SpikingJelly [4], processing all T timesteps jointly; BatchNorm is applied over the (T, B) axes, "
+     "giving a threshold-dependent normalisation similar to tdBN which stabilises deep-SNN training [10]. "
+     "SAR inputs use direct encoding (the analog chip is repeated over T timesteps), and the final-layer "
+     "membrane potentials are averaged over T and read out as class logits. The architecture mirrors the "
+     "vanilla ANN U-Net for a controlled comparison and is illustrated in Figure 2.")
 figure("fig2_architecture.png",
        "Figure 2. Spiking U-Net architecture (4-level encoder–decoder). Each block is Conv → tdBN "
        "(over T,B) → LIF (ATan surrogate, τ=2, detach-reset); red dashed lines are skip connections; "
        "the input is repeated over T timesteps and final membrane potentials are averaged to logits.")
-body("3.3 Energy modeling. At 45 nm [Horowitz 2014]: FP32 MAC = 4.6 pJ, INT8 MAC ≈ 0.23 pJ, "
-     "SNN AC = 0.9 pJ. ANN energy = FLOPs × E_MAC (ptflops); SNN energy = SynOps × E_AC where "
-     "SynOps = Σ_conv(MACs × input spike-rate) accumulated over T.")
-body("3.4 Statistical testing protocol. We report pooled and per-chip flood-IoU, and run Wilcoxon "
-     "signed-rank on paired per-chip flood-IoU (seeds averaged), plus bootstrap 95% CIs and paired "
-     "Cohen's d for key pairs.")
+body("3.3 Energy modeling. We estimate inference energy analytically at a 45 nm technology node using "
+     "the per-operation costs of Horowitz [19]: a 32-bit floating-point multiply-accumulate (MAC) costs "
+     "E_MAC ≈ 4.6 pJ, an INT8 MAC ≈ 0.23 pJ, and a spiking accumulate (AC, incurred only when a spike is "
+     "present) costs E_AC ≈ 0.9 pJ. For ANNs, energy = FLOPs × E_MAC, with MACs counted consistently by "
+     "ptflops. For SNNs, we count synaptic operations SynOps = Σ_conv (MACs × input spike-rate), "
+     "accumulated over the T timesteps, and energy = SynOps × E_AC; the spike-rate is measured empirically "
+     "(Section 5.3) rather than assumed. This makes SNN energy depend on genuine activation sparsity, not "
+     "on nominal model size, and puts SNNs and quantized CNNs on a common analytical footing.")
+body("3.4 Statistical testing protocol. Because accuracy differences between strong models are small, "
+     "point estimates alone are insufficient. We report two aggregations of flood-IoU: pooled (a single "
+     "confusion matrix accumulated over all test pixels) and per-chip (IoU computed per chip, then "
+     "averaged). For significance we apply the Wilcoxon signed-rank test to paired per-chip flood-IoU "
+     "(models paired chip-by-chip, seeds averaged), and complement p-values with bootstrap 95% "
+     "confidence intervals and paired Cohen's d effect sizes for the key model pairs, so that both "
+     "statistical significance and practical magnitude are reported.")
 
 # ---------- 4 Experimental Setup ----------
 h("4. Experimental Setup")
-body("4.1 Dataset. Sen1Floods11 hand-labeled subset: 446 chips of 512×512, 2 channels (VV/VH dB), "
-     "across 11 flood events/regions. 3-class labels via JRC permanent-water.")
+body("4.1 Dataset. We use the hand-labelled subset of Sen1Floods11 [1]: 446 chips of 512×512 pixels, "
+     "each with two Sentinel-1 channels (VV, VH; in dB), spanning eleven geographically diverse flood "
+     "events (Bolivia, Ghana, India, Mekong, Nigeria, Pakistan, Paraguay, Somalia, Spain, Sri-Lanka, "
+     "USA). Three-class labels are derived as in Section 3.1 using the JRC permanent-water layer [2]. "
+     "This geographic diversity enables the per-region analysis of Section 5.4.")
 body("4.2 Preprocessing & splits. dB clipped to [−50,0], normalized to [0,1]; NaN → ignore-index. "
      "One NaN-only chip is dropped (445 valid). Region-stratified split 60/20/20 → 271/87/87 chips "
      "(agreed protocol; larger test set than the earlier 70/20/10 for more reliable evaluation), with "
@@ -217,6 +263,10 @@ body("4.4 Training. Optimizer AdamW (lr = 1e-4, weight-decay = 1e-4; LR sweep al
 
 # ---------- 5 Results ----------
 h("5. Results")
+body("We evaluate all models on the held-out test split under the shared protocol of Section 3–4, "
+     "reporting accuracy (pooled and per-chip flood-IoU, flood F1, permanent-water IoU), model size, "
+     "estimated energy and — for SNNs — measured spike rate. Unless stated otherwise, values are the "
+     "mean over three seeds (T = 6 over five).")
 h("5.1 Main comparison (Table 1)", 11, 6)
 add_full_table(1)
 body("On pooled IoU the accuracy leaders are pretrained ANNs (U-Net++ 0.489, SegFormer 0.488); "
